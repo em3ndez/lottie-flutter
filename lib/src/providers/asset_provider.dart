@@ -1,20 +1,25 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:path/path.dart' as p;
 import '../composition.dart';
 import '../lottie_image_asset.dart';
+import 'load_fonts.dart';
 import 'load_image.dart';
 import 'lottie_provider.dart';
 
+@immutable
 class AssetLottie extends LottieProvider {
   AssetLottie(
     this.assetName, {
     this.bundle,
     this.package,
-    LottieImageProviderFactory? imageProviderFactory,
-  }) : super(imageProviderFactory: imageProviderFactory);
+    super.imageProviderFactory,
+    super.decoder,
+    super.backgroundLoading,
+  });
 
   final String assetName;
   String get keyName =>
@@ -25,20 +30,30 @@ class AssetLottie extends LottieProvider {
   final String? package;
 
   @override
-  Future<LottieComposition> load() async {
-    var cacheKey = 'asset-$keyName-$bundle';
-    return sharedLottieCache.putIfAbsent(cacheKey, () async {
-      final chosenBundle = bundle ?? rootBundle;
+  Future<LottieComposition> load({BuildContext? context}) {
+    return sharedLottieCache.putIfAbsent(this, () async {
+      final finalContext = context;
+      final chosenBundle = bundle ??
+          (finalContext != null
+              ? DefaultAssetBundle.of(finalContext)
+              : rootBundle);
 
       var data = await chosenBundle.load(keyName);
 
-      var composition = await LottieComposition.fromByteData(data,
-          name: p.url.basenameWithoutExtension(keyName),
-          imageProviderFactory: imageProviderFactory);
+      LottieComposition composition;
+      if (backgroundLoading) {
+        composition =
+            await compute(parseJsonBytes, (data.buffer.asUint8List(), decoder));
+      } else {
+        composition =
+            await LottieComposition.fromByteData(data, decoder: decoder);
+      }
 
       for (var image in composition.images.values) {
         image.loadedImage ??= await _loadImage(composition, image);
       }
+
+      await ensureLoadedFonts(composition);
 
       return composition;
     });
@@ -59,15 +74,16 @@ class AssetLottie extends LottieProvider {
   }
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other.runtimeType != runtimeType) return false;
     return other is AssetLottie &&
         other.keyName == keyName &&
-        other.bundle == bundle;
+        other.bundle == bundle &&
+        other.decoder == decoder;
   }
 
   @override
-  int get hashCode => hashValues(keyName, bundle);
+  int get hashCode => Object.hash(keyName, bundle);
 
   @override
   String toString() => '$runtimeType(bundle: $bundle, name: "$keyName")';

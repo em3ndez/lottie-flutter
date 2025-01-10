@@ -5,15 +5,15 @@ import '../../animation/keyframe/value_callback_keyframe_animation.dart';
 import '../../lottie_drawable.dart';
 import '../../lottie_property.dart';
 import '../../utils.dart';
-import '../../utils/path_factory.dart';
 import '../../value/lottie_value_callback.dart';
 import 'base_layer.dart';
 import 'layer.dart';
 
 class SolidLayer extends BaseLayer {
   final Paint paint = Paint()..style = PaintingStyle.fill;
-  final Path path = PathFactory.create();
+  final Path path = Path();
   BaseKeyframeAnimation<ColorFilter, ColorFilter?>? _colorFilterAnimation;
+  BaseKeyframeAnimation<Color, Color?>? _colorAnimation;
 
   SolidLayer(LottieDrawable lottieDrawable, Layer layerModel)
       : super(lottieDrawable, layerModel) {
@@ -21,20 +21,21 @@ class SolidLayer extends BaseLayer {
   }
 
   @override
-  void drawLayer(Canvas canvas, Size size, Matrix4 parentMatrix,
+  void drawLayer(Canvas canvas, Matrix4 parentMatrix,
       {required int parentAlpha}) {
-    var backgroundAlpha = layerModel.solidColor.alpha;
+    var backgroundAlpha = layerModel.solidColor.a;
     if (backgroundAlpha == 0) {
       return;
     }
 
+    paint.color = _colorAnimation?.value ?? layerModel.solidColor;
+
     var opacity = transform.opacity?.value ?? 100;
-    var alpha = (parentAlpha /
-            255.0 *
-            (backgroundAlpha / 255.0 * opacity / 100.0) *
-            255.0)
-        .round();
+    var alpha =
+        (parentAlpha / 255.0 * (backgroundAlpha * opacity / 100.0) * 255.0)
+            .round();
     paint.setAlpha(alpha);
+
     if (_colorFilterAnimation != null) {
       paint.colorFilter = _colorFilterAnimation!.value;
     }
@@ -75,6 +76,14 @@ class SolidLayer extends BaseLayer {
       } else {
         _colorFilterAnimation = ValueCallbackKeyframeAnimation(
             callback as LottieValueCallback<ColorFilter>, null);
+      }
+    } else if (property == LottieProperty.color) {
+      if (callback == null) {
+        _colorAnimation = null;
+        paint.color = layerModel.solidColor;
+      } else {
+        _colorAnimation = ValueCallbackKeyframeAnimation(
+            callback as LottieValueCallback<Color>, null);
       }
     }
   }

@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:typed_data';
 
 class Buffer {
   Buffer(this.buffer);
 
-  final Uint8List buffer;
+  final List<int> buffer;
   int _start = 0, _size = 0;
   int get size => _size;
 
@@ -67,7 +66,7 @@ class Buffer {
   }
 
   /// Reads and discards {@code byteCount} bytes from this source. Throws an
-  /// {@link java.io.EOFException} if the source is exhausted before the
+  /// [Exception] if the source is exhausted before the
   /// requested bytes can be skipped.
   void skip(int byteCount) {
     _start += byteCount;

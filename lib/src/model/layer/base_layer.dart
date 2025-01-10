@@ -173,8 +173,7 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
   }
 
   @override
-  void draw(Canvas canvas, Size canvasSize, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     L.beginSection(_drawTraceName);
     if (!_visible || layerModel.isHidden) {
       L.endSection(_drawTraceName);
@@ -190,10 +189,11 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
     L.endSection('Layer#parentMatrix');
     var opacity = transform.opacity?.value ?? 100;
     var alpha = ((parentAlpha / 255.0 * opacity / 100.0) * 255).toInt();
-    if (!hasMatteOnThisLayer() && !hasMasksOnThisLayer()) {
+    var blendMode = this.blendMode;
+    if (!hasMatteOnThisLayer() && !hasMasksOnThisLayer() && blendMode == null) {
       _matrix.preConcat(transform.getMatrix());
       L.beginSection('Layer#drawLayer');
-      drawLayer(canvas, canvasSize, _matrix, parentAlpha: alpha);
+      drawLayer(canvas, _matrix, parentAlpha: alpha);
       L.endSection('Layer#drawLayer');
       _recordRenderTime(L.endSection(_drawTraceName));
       return;
@@ -214,24 +214,19 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
     _matrix.preConcat(transform.getMatrix());
     bounds = _intersectBoundsWithMask(bounds, _matrix);
 
-    if (bounds
-        .intersect(Rect.fromLTWH(0, 0, canvasSize.width, canvasSize.height))
-        .isEmpty) {
-      bounds = Rect.zero;
-    }
-
     L.endSection('Layer#computeBounds');
 
     if (!bounds.isEmpty) {
       L.beginSection('Layer#saveLayer');
       _contentPaint.setAlpha(255);
+      _contentPaint.blendMode = blendMode ?? ui.BlendMode.srcOver;
       canvas.saveLayer(bounds, _contentPaint);
       L.endSection('Layer#saveLayer');
 
       // Clear the off screen buffer. This is necessary for some phones.
       _clearCanvas(canvas, bounds);
       L.beginSection('Layer#drawLayer');
-      drawLayer(canvas, canvasSize, _matrix, parentAlpha: alpha);
+      drawLayer(canvas, _matrix, parentAlpha: alpha);
       L.endSection('Layer#drawLayer');
 
       if (hasMasksOnThisLayer()) {
@@ -244,7 +239,7 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
         canvas.saveLayer(bounds, _mattePaint);
         L.endSection('Layer#saveLayer');
         _clearCanvas(canvas, bounds);
-        _matteLayer!.draw(canvas, canvasSize, parentMatrix, parentAlpha: alpha);
+        _matteLayer!.draw(canvas, parentMatrix, parentAlpha: alpha);
         L.beginSection('Layer#restoreLayer');
         canvas.restore();
         L.endSection('Layer#restoreLayer');
@@ -339,7 +334,7 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
     return bounds;
   }
 
-  void drawLayer(Canvas canvas, Size size, Matrix4 parentMatrix,
+  void drawLayer(Canvas canvas, Matrix4 parentMatrix,
       {required int parentAlpha});
 
   void _applyMasks(Canvas canvas, Rect bounds, Matrix4 matrix) {
@@ -363,7 +358,6 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
             _contentPaint.setAlpha(255);
             canvas.drawRect(bounds, _contentPaint);
           }
-          break;
         case MaskMode.maskModeAdd:
           if (mask.isInverted) {
             _applyInvertedAddMask(
@@ -372,7 +366,6 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
             _applyAddMask(
                 canvas, matrix, mask, maskAnimation, opacityAnimation);
           }
-          break;
         case MaskMode.maskModeSubstract:
           if (i == 0) {
             _contentPaint.color = const ui.Color(0xFF000000);
@@ -385,7 +378,6 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
             _applySubtractMask(
                 canvas, matrix, mask, maskAnimation, opacityAnimation);
           }
-          break;
         case MaskMode.maskModeIntersect:
           if (mask.isInverted) {
             _applyInvertedIntersectMask(
@@ -394,7 +386,6 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
             _applyIntersectMask(
                 canvas, bounds, matrix, mask, maskAnimation, opacityAnimation);
           }
-          break;
       }
     }
     L.beginSection('Layer#restoreLayer');
@@ -556,6 +547,10 @@ abstract class BaseLayer implements DrawingContent, KeyPathElement {
 
   BlurEffect? get blurEffect {
     return layerModel.blurEffect;
+  }
+
+  BlendMode? get blendMode {
+    return layerModel.blendMode;
   }
 
   MaskFilter? getBlurMaskFilter(double radius) {

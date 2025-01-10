@@ -9,11 +9,12 @@ import 'moshi/json_reader.dart';
 
 class PolystarShapeParser {
   static final JsonReaderOptions _names = JsonReaderOptions.of(
-      ['nm', 'sy', 'pt', 'p', 'r', 'or', 'os', 'ir', 'is', 'hd']);
+      ['nm', 'sy', 'pt', 'p', 'r', 'or', 'os', 'ir', 'is', 'hd', 'd']);
 
   PolystarShapeParser._();
 
-  static PolystarShape parse(JsonReader reader, LottieComposition composition) {
+  static PolystarShape parse(JsonReader reader, LottieComposition composition,
+      {required int d}) {
     String? name;
     PolystarShapeType? type;
     late AnimatableDoubleValue points;
@@ -24,46 +25,36 @@ class PolystarShapeParser {
     AnimatableDoubleValue? innerRadius;
     AnimatableDoubleValue? innerRoundedness;
     var hidden = false;
+    var reversed = d == 3;
 
     while (reader.hasNext()) {
       switch (reader.selectName(_names)) {
         case 0:
           name = reader.nextString();
-          break;
         case 1:
           type = PolystarShapeType.forValue(reader.nextInt());
-          break;
         case 2:
-          points = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          points = AnimatableValueParser.parseFloat(reader, composition);
         case 3:
           position =
               AnimatablePathValueParser.parseSplitPath(reader, composition);
-          break;
         case 4:
-          rotation = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          rotation = AnimatableValueParser.parseFloat(reader, composition);
         case 5:
           outerRadius = AnimatableValueParser.parseFloat(reader, composition);
-          break;
         case 6:
-          outerRoundedness = AnimatableValueParser.parseFloat(
-              reader, composition,
-              isDp: false);
-          break;
+          outerRoundedness =
+              AnimatableValueParser.parseFloat(reader, composition);
         case 7:
           innerRadius = AnimatableValueParser.parseFloat(reader, composition);
-          break;
         case 8:
-          innerRoundedness = AnimatableValueParser.parseFloat(
-              reader, composition,
-              isDp: false);
-          break;
+          innerRoundedness =
+              AnimatableValueParser.parseFloat(reader, composition);
         case 9:
           hidden = reader.nextBoolean();
-          break;
+        case 10:
+          // "d" is 2 for normal and 3 for reversed.
+          reversed = reader.nextInt() == 3;
         default:
           reader.skipName();
           reader.skipValue();
@@ -81,6 +72,7 @@ class PolystarShapeParser {
       innerRoundedness: innerRoundedness,
       outerRoundedness: outerRoundedness,
       hidden: hidden,
+      isReversed: reversed,
     );
   }
 }

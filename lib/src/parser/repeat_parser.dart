@@ -23,21 +23,14 @@ class RepeaterParser {
       switch (reader.selectName(_names)) {
         case 0:
           name = reader.nextString();
-          break;
         case 1:
-          copies = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          copies = AnimatableValueParser.parseFloat(reader, composition);
         case 2:
-          offset = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          offset = AnimatableValueParser.parseFloat(reader, composition);
         case 3:
           transform = AnimatableTransformParser.parse(reader, composition);
-          break;
         case 4:
           hidden = reader.nextBoolean();
-          break;
         default:
           reader.skipValue();
       }

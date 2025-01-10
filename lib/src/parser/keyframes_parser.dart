@@ -1,4 +1,3 @@
-import '../animation/keyframe/path_keyframe.dart';
 import '../composition.dart';
 import '../value/keyframe.dart';
 import 'keyframe_parser.dart';
@@ -11,7 +10,7 @@ class KeyframesParser {
   KeyframesParser._();
 
   static List<Keyframe<T>> parse<T>(JsonReader reader,
-      LottieComposition composition, double scale, ValueParser<T> valueParser,
+      LottieComposition composition, ValueParser<T> valueParser,
       {bool multiDimensional = false}) {
     var keyframes = <Keyframe<T>>[];
 
@@ -30,22 +29,20 @@ class KeyframesParser {
             if (reader.peek() == Token.number) {
               // For properties in which the static value is an array of numbers.
               keyframes.add(KeyframeParser.parse(
-                  reader, composition, scale, valueParser,
+                  reader, composition, valueParser,
                   animated: false, multiDimensional: multiDimensional));
             } else {
               while (reader.hasNext()) {
                 keyframes.add(KeyframeParser.parse(
-                    reader, composition, scale, valueParser,
+                    reader, composition, valueParser,
                     animated: true, multiDimensional: multiDimensional));
               }
             }
             reader.endArray();
           } else {
-            keyframes.add(KeyframeParser.parse(
-                reader, composition, scale, valueParser,
+            keyframes.add(KeyframeParser.parse(reader, composition, valueParser,
                 animated: false, multiDimensional: multiDimensional));
           }
-          break;
         default:
           reader.skipValue();
       }
@@ -67,9 +64,6 @@ class KeyframesParser {
       keyframe.endFrame = nextKeyframe.startFrame;
       if (keyframe.endValue == null && nextKeyframe.startValue != null) {
         keyframe.endValue = nextKeyframe.startValue;
-        if (keyframe is PathKeyframe) {
-          (keyframe as PathKeyframe).createPath();
-        }
       }
     }
     var lastKeyframe = keyframes[size - 1];

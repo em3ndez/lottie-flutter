@@ -17,7 +17,7 @@ class StrokeContent extends BaseStrokeContent {
   BaseKeyframeAnimation<ColorFilter, ColorFilter?>? _colorFilterAnimation;
 
   StrokeContent(
-      final LottieDrawable lottieDrawable, BaseLayer layer, ShapeStroke stroke)
+      LottieDrawable lottieDrawable, BaseLayer layer, ShapeStroke stroke)
       : name = stroke.name,
         _hidden = stroke.hidden,
         _colorAnimation = stroke.color.createAnimation(),
@@ -34,16 +34,16 @@ class StrokeContent extends BaseStrokeContent {
   }
 
   @override
-  void draw(Canvas canvas, Size size, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     if (_hidden) {
       return;
     }
-    paint.color = _colorAnimation.value.withAlpha(paint.color.alpha);
+    paint.color =
+        _colorAnimation.value.withAlpha((paint.color.a * 255).toInt());
     if (_colorFilterAnimation != null) {
       paint.colorFilter = _colorFilterAnimation!.value;
     }
-    super.draw(canvas, size, parentMatrix, parentAlpha: parentAlpha);
+    super.draw(canvas, parentMatrix, parentAlpha: parentAlpha);
   }
 
   @override

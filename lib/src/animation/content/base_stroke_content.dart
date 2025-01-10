@@ -14,7 +14,6 @@ import '../../model/layer/base_layer.dart';
 import '../../utils.dart';
 import '../../utils/dash_path.dart';
 import '../../utils/misc.dart';
-import '../../utils/path_factory.dart';
 import '../../utils/utils.dart';
 import '../../value/drop_shadow.dart';
 import '../../value/lottie_value_callback.dart';
@@ -29,8 +28,8 @@ import 'trim_path_content.dart';
 
 abstract class BaseStrokeContent
     implements KeyPathElementContent, DrawingContent {
-  final Path _path = PathFactory.create();
-  final Path _trimPathPath = PathFactory.create();
+  final Path _path = Path();
+  final Path _trimPathPath = Path();
   final LottieDrawable lottieDrawable;
   final BaseLayer layer;
   final List<_PathGroup> _pathGroups = <_PathGroup>[];
@@ -81,7 +80,7 @@ abstract class BaseStrokeContent
       _dashPatternAnimations[i].addUpdateListener(onUpdateListener);
     }
     if (_dashPatternOffsetAnimation != null) {
-      _dashPatternOffsetAnimation!.addUpdateListener(onUpdateListener);
+      _dashPatternOffsetAnimation.addUpdateListener(onUpdateListener);
     }
     var blurEffect = layer.blurEffect;
     if (blurEffect != null) {
@@ -135,8 +134,7 @@ abstract class BaseStrokeContent
   }
 
   @override
-  void draw(Canvas canvas, Size size, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     L.beginSection('StrokeContent#draw');
     if (parentMatrix.hasZeroScaleAxis) {
       L.endSection('StrokeContent#draw');
@@ -144,7 +142,7 @@ abstract class BaseStrokeContent
     }
     var alpha =
         ((parentAlpha / 255.0 * _opacityAnimation.value / 100.0) * 255).round();
-    paint.setAlpha(alpha.clamp(0, 255).toInt());
+    paint.setAlpha(alpha.clamp(0, 255));
     paint.strokeWidth = _widthAnimation.value * parentMatrix.getScale();
     if (paint.strokeWidth <= 0) {
       // Android draws a hairline stroke for 0, After Effects doesn't.
@@ -196,7 +194,8 @@ abstract class BaseStrokeContent
   void _applyTrimPath(
       Canvas canvas, _PathGroup pathGroup, Matrix4 parentMatrix) {
     L.beginSection('StrokeContent#applyTrimPath');
-    if (pathGroup.trimPath == null) {
+    var trimPath = pathGroup.trimPath;
+    if (trimPath == null) {
       L.endSection('StrokeContent#applyTrimPath');
       return;
     }
@@ -205,13 +204,24 @@ abstract class BaseStrokeContent
       _path.addPath(pathGroup.paths[j].getPath(), Offset.zero,
           matrix4: parentMatrix.storage);
     }
+    var animStartValue = trimPath.start.value / 100;
+    var animEndValue = trimPath.end.value / 100;
+    var animOffsetValue = trimPath.offset.value / 360;
+
+    // If the start-end is ~100, consider it to be the full path.
+    if (animStartValue < 0.01 && animEndValue > 0.99) {
+      canvas.drawPath(_path, paint);
+      L.endSection('StrokeContent#applyTrimPath');
+      return;
+    }
+
     var pathMetrics = _path.computeMetrics().toList();
     var totalLength = pathMetrics.fold<double>(0.0, (a, b) => a + b.length);
 
-    var trimPath = pathGroup.trimPath!;
-    var offsetLength = totalLength * trimPath.offset.value / 360.0;
-    var startLength = totalLength * trimPath.start.value / 100.0 + offsetLength;
-    var endLength = totalLength * trimPath.end.value / 100.0 + offsetLength;
+    var offsetLength = totalLength * animOffsetValue;
+    var startLength = totalLength * animStartValue + offsetLength;
+    var endLength = min(totalLength * animEndValue + offsetLength,
+        startLength + totalLength - 1);
 
     var currentLength = 0.0;
     for (var j = pathGroup.paths.length - 1; j >= 0; j--) {
@@ -309,7 +319,7 @@ abstract class BaseStrokeContent
 
     var offset = _dashPatternOffsetAnimation == null
         ? 0.0
-        : _dashPatternOffsetAnimation!.value * scale;
+        : _dashPatternOffsetAnimation.value * scale;
     var newPath = dashPath(path, intervals: _dashPatternValues, phase: offset);
     L.endSection('StrokeContent#applyDashPattern');
 

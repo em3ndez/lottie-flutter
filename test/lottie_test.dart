@@ -1,15 +1,13 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lottie/lottie.dart';
-import 'package:lottie/src/providers/lottie_provider.dart';
 
 void main() {
   tearDown(() {
-    sharedLottieCache.clear();
+    Lottie.cache.clear();
   });
 
   testWidgets('Should settle if no animation', (tester) async {
@@ -325,6 +323,167 @@ void main() {
     expect(find.byKey(errorKey), findsNothing);
     expect(loadedCall, 1);
   });
+
+  testWidgets('Cache should be synchronous', (tester) async {
+    var hamburgerData =
+        Future.value(bytesForFile('example/assets/HamburgerArrow.json'));
+    var mockAsset = FakeAssetBundle({
+      'hamburger.json': hamburgerData,
+    });
+
+    var loadedCall = 0;
+    var lottieWidget = LottieBuilder.asset(
+      'hamburger.json',
+      bundle: mockAsset,
+      onLoaded: (c) {
+        ++loadedCall;
+      },
+    );
+
+    await tester.pumpWidget(lottieWidget);
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNull);
+    await tester.pump();
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNotNull);
+
+    await tester.pumpWidget(Column(
+      children: [
+        lottieWidget,
+        lottieWidget,
+      ],
+    ));
+    expect(tester.widget<Lottie>(find.byType(Lottie).at(0)).composition,
+        isNotNull);
+    expect(tester.widget<Lottie>(find.byType(Lottie).at(1)).composition,
+        isNotNull);
+    expect(loadedCall, 3);
+  });
+
+  testWidgets('Cache can be cleared', (tester) async {
+    var hamburgerData =
+        Future.value(bytesForFile('example/assets/HamburgerArrow.json'));
+    var mockAsset = FakeAssetBundle({
+      'hamburger.json': hamburgerData,
+    });
+
+    var loadedCall = 0;
+    var lottieWidget = LottieBuilder.asset(
+      'hamburger.json',
+      bundle: mockAsset,
+      onLoaded: (c) {
+        ++loadedCall;
+      },
+    );
+
+    await tester.pumpWidget(lottieWidget);
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNull);
+    await tester.pump();
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNotNull);
+
+    Lottie.cache.clear();
+
+    await tester.pumpWidget(Center(
+      child: lottieWidget,
+    ));
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNull);
+    await tester.pump();
+    expect(tester.widget<Lottie>(find.byType(Lottie)).composition, isNotNull);
+    expect(loadedCall, 2);
+  });
+
+  testWidgets('onLoaded is ', (tester) async {
+    var hamburgerData =
+        Future.value(bytesForFile('example/assets/HamburgerArrow.json'));
+    var mockAsset = FakeAssetBundle({
+      'hamburger.json': hamburgerData,
+    });
+    var provider = AssetLottie('hamburger.json', bundle: mockAsset);
+
+    await tester.pumpWidget(KeyedSubtree(
+        key: UniqueKey(), child: _LottieWithSetStateInOnLoaded(provider)));
+    var state1 = tester.state<__LottieWithSetStateInOnLoadedState>(
+        find.byType(_LottieWithSetStateInOnLoaded));
+    expect(state1.loadedCount, 1);
+    await tester.pump();
+    expect(state1.loadedCount, 1);
+
+    await tester.pumpWidget(KeyedSubtree(
+        key: UniqueKey(), child: _LottieWithSetStateInOnLoaded(provider)));
+    var state2 = tester.state<__LottieWithSetStateInOnLoadedState>(
+        find.byType(_LottieWithSetStateInOnLoaded));
+    expect(state2.loadedCount, 1);
+    await tester.pump();
+    expect(state2.loadedCount, 1);
+    expect(state1, isNot(state2));
+  });
+
+  testWidgets(
+    'if composition is static should create Lottie with [animate] false by default',
+    (tester) async {
+      await tester.pumpWidget(
+        LottieBuilder.memory(
+          File('test/data/static_lottie.json').readAsBytesSync(),
+        ),
+      );
+      expect(tester.hasRunningAnimations, false);
+    },
+  );
+
+  testWidgets(
+    'if composition is static and [animate] is true, should have animations',
+    (tester) async {
+      await tester.pumpWidget(
+        LottieBuilder.memory(
+          File('test/data/static_lottie.json').readAsBytesSync(),
+          animate: true,
+        ),
+      );
+      expect(tester.hasRunningAnimations, true);
+    },
+  );
+
+  testWidgets('AssetLottie uses DefaultAssetBundle', (tester) async {
+    var hamburgerData =
+        Future.value(bytesForFile('example/assets/HamburgerArrow.json'));
+    var mockAsset = FakeAssetBundle({
+      'hamburger.json': hamburgerData,
+      'other.json': hamburgerData,
+    });
+    await tester.pumpWidget(
+      DefaultAssetBundle(
+        bundle: mockAsset,
+        child: Lottie.asset('hamburger.json'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byType(RawLottie), findsOneWidget);
+    expect(
+        find.byWidgetPredicate((w) => w is RawLottie && w.composition != null),
+        findsOneWidget);
+
+    await tester.pumpWidget(
+      DefaultAssetBundle(
+        bundle: mockAsset,
+        child: Lottie.asset('other.json'),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+        find.byWidgetPredicate((w) => w is RawLottie && w.composition != null),
+        findsOneWidget);
+  });
+
+  testWidgets('expected an int', (tester) async {
+    var data = File('example/assets/Tests/kona_splash_animation.json')
+        .readAsBytesSync();
+    var composition = await LottieComposition.fromBytes(data);
+
+    await tester.pumpWidget(Lottie(
+      composition: composition,
+      animate: false,
+    ));
+
+    await tester.pumpAndSettle();
+  });
 }
 
 class SynchronousFile extends Fake implements File {
@@ -350,5 +509,32 @@ class FakeAssetBundle extends Fake implements AssetBundle {
   @override
   Future<ByteData> load(String key) {
     return data[key] ?? (Future.error('Asset $key not found'));
+  }
+}
+
+class _LottieWithSetStateInOnLoaded extends StatefulWidget {
+  final LottieProvider lottie;
+
+  const _LottieWithSetStateInOnLoaded(this.lottie);
+
+  @override
+  State<_LottieWithSetStateInOnLoaded> createState() =>
+      __LottieWithSetStateInOnLoadedState();
+}
+
+class __LottieWithSetStateInOnLoadedState
+    extends State<_LottieWithSetStateInOnLoaded> {
+  var loadedCount = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return LottieBuilder(
+      lottie: widget.lottie,
+      onLoaded: (_) {
+        setState(() {
+          ++loadedCount;
+        });
+      },
+    );
   }
 }

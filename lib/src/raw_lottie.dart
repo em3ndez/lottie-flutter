@@ -5,15 +5,16 @@ import 'frame_rate.dart';
 import 'lottie_delegates.dart';
 import 'lottie_drawable.dart';
 import 'options.dart';
+import 'render_cache.dart';
 import 'render_lottie.dart';
 
 /// A widget that displays a [LottieDrawable] directly.
 ///
-/// This widget is rarely used directly. Instead, consider using [Lottie] or [LottieAnimation].
+/// This widget is rarely used directly. Instead, consider using [Lottie].
 class RawLottie extends LeafRenderObjectWidget {
   /// Creates a widget that displays a Lottie composition.
   const RawLottie({
-    Key? key,
+    super.key,
     this.composition,
     this.delegates,
     this.options,
@@ -23,9 +24,10 @@ class RawLottie extends LeafRenderObjectWidget {
     this.height,
     this.fit,
     AlignmentGeometry? alignment,
+    this.filterQuality,
+    this.renderCache,
   })  : progress = progress ?? 0.0,
-        alignment = alignment ?? Alignment.center,
-        super(key: key);
+        alignment = alignment ?? Alignment.center;
 
   /// The Lottie composition to display.
   final LottieComposition? composition;
@@ -78,33 +80,48 @@ class RawLottie extends LeafRenderObjectWidget {
   ///    relative to text direction.
   final AlignmentGeometry alignment;
 
+  /// {@macro lottie.renderCache}
+  final RenderCache? renderCache;
+
+  final FilterQuality? filterQuality;
+
   @override
   RenderLottie createRenderObject(BuildContext context) {
     return RenderLottie(
       composition: composition,
       delegates: delegates,
       enableMergePaths: options?.enableMergePaths,
+      enableApplyingOpacityToLayers: options?.enableApplyingOpacityToLayers,
       progress: progress,
       frameRate: frameRate,
       width: width,
       height: height,
       fit: fit,
       alignment: alignment,
+      filterQuality: filterQuality,
+      renderCache: renderCache,
+      devicePixelRatio: MediaQuery.devicePixelRatioOf(context),
     );
   }
 
   @override
   void updateRenderObject(BuildContext context, RenderLottie renderObject) {
     renderObject
-      ..setComposition(composition,
-          progress: progress,
-          frameRate: frameRate,
-          delegates: delegates,
-          enableMergePaths: options?.enableMergePaths)
+      ..setComposition(
+        composition,
+        progress: progress,
+        frameRate: frameRate,
+        delegates: delegates,
+        enableMergePaths: options?.enableMergePaths,
+        enableApplyingOpacityToLayers: options?.enableApplyingOpacityToLayers,
+        filterQuality: filterQuality,
+      )
       ..width = width
       ..height = height
       ..alignment = alignment
-      ..fit = fit;
+      ..fit = fit
+      ..renderCache = renderCache
+      ..devicePixelRatio = MediaQuery.devicePixelRatioOf(context);
   }
 
   @override

@@ -14,43 +14,49 @@ class JsonUtils {
     return Color.fromARGB(255, r, g, b);
   }
 
-  static List<Offset> jsonToPoints(JsonReader reader, double scale) {
+  static List<Offset> jsonToPoints(JsonReader reader) {
     var points = <Offset>[];
 
     reader.beginArray();
     while (reader.peek() == Token.beginArray) {
       reader.beginArray();
-      points.add(jsonToPoint(reader, scale));
+      points.add(jsonToPoint(reader));
       reader.endArray();
     }
     reader.endArray();
     return points;
   }
 
-  static Offset jsonToPoint(JsonReader reader, double scale) {
+  static Offset jsonToPoint(JsonReader reader) {
     switch (reader.peek()) {
       case Token.number:
-        return _jsonNumbersToPoint(reader, scale);
+        return _jsonNumbersToPoint(reader);
       case Token.beginArray:
-        return _jsonArrayToPoint(reader, scale);
+        return _jsonArrayToPoint(reader);
       case Token.beginObject:
-        return _jsonObjectToPoint(reader, scale: scale);
-      // ignore: no_default_cases
-      default:
+        return _jsonObjectToPoint(reader);
+      case Token.nullToken:
+        return Offset.zero;
+      case Token.endArray:
+      case Token.endObject:
+      case Token.name:
+      case Token.string:
+      case Token.boolean:
+      case Token.endDocument:
         throw Exception('Unknown point starts with ${reader.peek()}');
     }
   }
 
-  static Offset _jsonNumbersToPoint(JsonReader reader, double scale) {
+  static Offset _jsonNumbersToPoint(JsonReader reader) {
     var x = reader.nextDouble();
     var y = reader.nextDouble();
     while (reader.hasNext()) {
       reader.skipValue();
     }
-    return Offset(x * scale, y * scale);
+    return Offset(x, y);
   }
 
-  static Offset _jsonArrayToPoint(JsonReader reader, double scale) {
+  static Offset _jsonArrayToPoint(JsonReader reader) {
     double x;
     double y;
     reader.beginArray();
@@ -60,12 +66,12 @@ class JsonUtils {
       reader.skipValue();
     }
     reader.endArray();
-    return Offset(x * scale, y * scale);
+    return Offset(x, y);
   }
 
   static final JsonReaderOptions _pointNames = JsonReaderOptions.of(['x', 'y']);
 
-  static Offset _jsonObjectToPoint(JsonReader reader, {required double scale}) {
+  static Offset _jsonObjectToPoint(JsonReader reader) {
     var x = 0.0;
     var y = 0.0;
     reader.beginObject();
@@ -73,17 +79,15 @@ class JsonUtils {
       switch (reader.selectName(_pointNames)) {
         case 0:
           x = valueFromObject(reader);
-          break;
         case 1:
           y = valueFromObject(reader);
-          break;
         default:
           reader.skipName();
           reader.skipValue();
       }
     }
     reader.endObject();
-    return Offset(x * scale, y * scale);
+    return Offset(x, y);
   }
 
   static double valueFromObject(JsonReader reader) {
@@ -99,8 +103,14 @@ class JsonUtils {
         }
         reader.endArray();
         return val;
-      // ignore: no_default_cases
-      default:
+      case Token.endArray:
+      case Token.beginObject:
+      case Token.endObject:
+      case Token.name:
+      case Token.string:
+      case Token.boolean:
+      case Token.nullToken:
+      case Token.endDocument:
         throw Exception('Unknown value for token of type $token');
     }
   }

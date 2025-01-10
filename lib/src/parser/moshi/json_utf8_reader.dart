@@ -200,7 +200,6 @@ class JsonUtf8Reader extends JsonReader {
           return _peeked = peekedEndArray;
         case $semicolon:
           _checkLenient();
-          break;
         case $comma:
           break;
         default:
@@ -218,7 +217,6 @@ class JsonUtf8Reader extends JsonReader {
             return _peeked = peekedEndObject;
           case $semicolon:
             _checkLenient(); // fall-through
-            break;
           case $comma:
             break;
           default:
@@ -262,7 +260,6 @@ class JsonUtf8Reader extends JsonReader {
           if (buffer.request(1) && buffer.getByte(0) == $greaterThan) {
             buffer.readByte(); // Consume '>'.
           }
-          break;
         default:
           throw syntaxError("Expected ':'");
       }
@@ -860,7 +857,7 @@ class JsonUtf8Reader extends JsonReader {
 
   /// Returns the next character in the stream that is neither whitespace nor a
   /// part of a comment. When this returns, the returned character is always at
-  /// {@code buffer.getByte(0)}.
+  /// {buffer.getByte(0)}.
   int _nextNonWhitespace(bool throwOnEof) {
     // This code uses ugly local variables 'p' and 'l' representing the 'pos'
     // and 'limit' fields respectively. Using locals rather than fields saves

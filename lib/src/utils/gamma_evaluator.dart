@@ -13,7 +13,7 @@ class GammaEvaluator {
     // IEC 61966-2-1:1999
     return linear <= 0.0031308
         ? linear * 12.92
-        : ((pow(linear, 1.0 / 2.4) * 1.055) - 0.055).toDouble();
+        : ((pow(linear, 1.0 / 2.4) * 1.055) - 0.055);
   }
 
   // Electro-optical conversion function for the sRGB color space
@@ -26,18 +26,25 @@ class GammaEvaluator {
   }
 
   static Color evaluate(double fraction, Color startColor, Color endColor) {
+    // Fast return in case start and end is the same
+    // or if fraction is at start/end or out of [0,1] bounds
     if (startColor == endColor) {
       return startColor;
+    } else if (fraction <= 0) {
+      return startColor;
+    } else if (fraction >= 1) {
+      return endColor;
     }
-    var startA = startColor.alpha / 255.0;
-    var startR = startColor.red / 255.0;
-    var startG = startColor.green / 255.0;
-    var startB = startColor.blue / 255.0;
 
-    var endA = endColor.alpha / 255.0;
-    var endR = endColor.red / 255.0;
-    var endG = endColor.green / 255.0;
-    var endB = endColor.blue / 255.0;
+    var startA = startColor.a;
+    var startR = startColor.r;
+    var startG = startColor.g;
+    var startB = startColor.b;
+
+    var endA = endColor.a;
+    var endR = endColor.r;
+    var endG = endColor.g;
+    var endB = endColor.b;
 
     // convert from sRGB to linear
     startR = _eocfSRgb(startR);

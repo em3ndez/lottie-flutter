@@ -7,8 +7,7 @@ class FilmStrip extends StatelessWidget {
   final Size size;
 
   const FilmStrip(this.composition,
-      {Key? key, required this.size, this.delegates})
-      : super(key: key);
+      {super.key, required this.size, this.delegates});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +27,7 @@ class _CustomerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     var thumbSize = Size(size.width / _columns, size.width / _columns);
-    var drawable = LottieDrawable(parent.composition);
+    var drawable = LottieDrawable(parent.composition, frameRate: FrameRate.max);
     if (parent.delegates != null) {
       drawable.delegates = parent.delegates;
     }
@@ -42,7 +41,7 @@ class _CustomerPainter extends CustomPainter {
           thumbSize;
 
       drawable
-        ..setProgress(progress, frameRate: FrameRate.max)
+        ..setProgress(progress)
         ..draw(canvas, rect);
 
       ++index;

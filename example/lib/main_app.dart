@@ -14,47 +14,49 @@ void main() {
 }
 
 class App extends StatelessWidget {
-  const App({Key? key}) : super(key: key);
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      //showPerformanceOverlay: true,
+      showPerformanceOverlay: true,
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Lottie Flutter'),
         ),
-        body: Scrollbar(
-          child: GridView.builder(
-            itemCount: files.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4),
-            itemBuilder: (context, index) {
-              var assetName = files[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                          builder: (context) => Detail(assetName)));
-                },
-                child: _Item(
-                  child: Lottie.asset(
-                    assetName,
-                    onWarning: (w) => _logger.info('$assetName - $w'),
-                    frameBuilder: (context, child, composition) {
-                      return AnimatedOpacity(
-                        opacity: composition == null ? 0 : 1,
-                        duration: const Duration(seconds: 1),
-                        curve: Curves.easeOut,
-                        child: child,
-                      );
-                    },
-                  ),
+        body: GridView.builder(
+          primary: true,
+          itemCount: files.length,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4),
+          itemBuilder: (context, index) {
+            var assetName = files[index];
+            return GestureDetector(
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                        builder: (context) => Detail(assetName)));
+              },
+              child: _Item(
+                child: Lottie.asset(
+                  assetName,
+                  fit: BoxFit.contain,
+                  renderCache: RenderCache.drawingCommands,
+                  backgroundLoading: false,
+                  onWarning: (w) => _logger.info('$assetName - $w'),
+                  frameBuilder: (context, child, composition) {
+                    return AnimatedOpacity(
+                      opacity: composition == null ? 0 : 1,
+                      duration: const Duration(seconds: 1),
+                      curve: Curves.easeOut,
+                      child: child,
+                    );
+                  },
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -64,7 +66,7 @@ class App extends StatelessWidget {
 class _Item extends StatelessWidget {
   final Widget child;
 
-  const _Item({Key? key, required this.child}) : super(key: key);
+  const _Item({required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +78,7 @@ class _Item extends StatelessWidget {
             borderRadius: const BorderRadius.all(Radius.circular(10)),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   offset: const Offset(2, 2),
                   blurRadius: 5)
             ]),
@@ -89,10 +91,10 @@ class _Item extends StatelessWidget {
 class Detail extends StatefulWidget {
   final String assetName;
 
-  const Detail(this.assetName, {Key? key}) : super(key: key);
+  const Detail(this.assetName, {super.key});
 
   @override
-  _DetailState createState() => _DetailState();
+  State<Detail> createState() => _DetailState();
 }
 
 class _DetailState extends State<Detail> with TickerProviderStateMixin {

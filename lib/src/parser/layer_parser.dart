@@ -7,6 +7,7 @@ import '../model/animatable/animatable_transform.dart';
 import '../model/content/blur_effect.dart';
 import '../model/content/content_model.dart';
 import '../model/content/drop_shadow_effect.dart';
+import '../model/content/layer_blend.dart';
 import '../model/content/mask.dart';
 import '../model/layer/layer.dart';
 import '../utils/misc.dart';
@@ -46,34 +47,33 @@ class LayerParser {
     'op', // 19
     'tm', // 20
     'cl', // 21
-    'hd' // 22
+    'hd', // 22
+    'ao', // 23
+    'bm', // 24
   ]);
 
   static Layer parse(LottieComposition composition) {
     var bounds = composition.bounds;
     return Layer(
-        shapes: <ContentModel>[],
-        composition: composition,
-        name: '__container',
-        id: -1,
-        layerType: LayerType.preComp,
-        parentId: -1,
-        refId: null,
-        masks: <Mask>[],
-        transform: AnimatableTransform(),
-        solidWidth: 0,
-        solidHeight: 0,
-        solidColor: const Color(0x00000000),
-        timeStretch: 0,
-        startFrame: 0,
-        preCompWidth: bounds.width,
-        preCompHeight: bounds.height,
-        text: null,
-        textProperties: null,
-        inOutKeyframes: <Keyframe<double>>[],
-        matteType: MatteType.none,
-        timeRemapping: null,
-        isHidden: false);
+      shapes: <ContentModel>[],
+      composition: composition,
+      name: '__container',
+      id: -1,
+      layerType: LayerType.preComp,
+      parentId: -1,
+      masks: <Mask>[],
+      transform: AnimatableTransform(),
+      solidWidth: 0,
+      solidHeight: 0,
+      solidColor: const Color(0x00000000),
+      timeStretch: 0,
+      startFrame: 0,
+      preCompWidth: bounds.width,
+      preCompHeight: bounds.height,
+      inOutKeyframes: <Keyframe<double>>[],
+      matteType: MatteType.none,
+      isHidden: false,
+    );
   }
 
   static final JsonReaderOptions _textNames = JsonReaderOptions.of(['d', 'a']);
@@ -102,8 +102,10 @@ class LayerParser {
     var hidden = false;
     BlurEffect? blurEffect;
     DropShadowEffect? dropShadowEffect;
+    var autoOrient = false;
 
     var matteType = MatteType.none;
+    BlendMode? blendMode;
     AnimatableTransform? transform;
     AnimatableTextFrame? text;
     AnimatableTextProperties? textProperties;
@@ -117,13 +119,10 @@ class LayerParser {
       switch (reader.selectName(_names)) {
         case 0:
           layerName = reader.nextString();
-          break;
         case 1:
           layerId = reader.nextInt();
-          break;
         case 2:
           refId = reader.nextString();
-          break;
         case 3:
           var layerTypeInt = reader.nextInt();
           if (layerTypeInt < LayerType.unknown.index) {
@@ -131,23 +130,17 @@ class LayerParser {
           } else {
             layerType = LayerType.unknown;
           }
-          break;
         case 4:
           parentId = reader.nextInt();
-          break;
         case 5:
-          solidWidth = (reader.nextInt() * window.devicePixelRatio).round();
-          break;
+          solidWidth = reader.nextInt();
         case 6:
-          solidHeight = (reader.nextInt() * window.devicePixelRatio).round();
-          break;
+          solidHeight = reader.nextInt();
         case 7:
           solidColor = MiscUtils.parseColor(reader.nextString(),
               warningCallback: composition.addWarning);
-          break;
         case 8:
           transform = AnimatableTransformParser.parse(reader, composition);
-          break;
         case 9:
           var matteTypeIndex = reader.nextInt();
           if (matteTypeIndex >= MatteType.values.length) {
@@ -161,7 +154,6 @@ class LayerParser {
             composition.addWarning('Unsupported matte type: Luma Inverted');
           }
           composition.incrementMatteOrMaskCount(1);
-          break;
         case 10:
           reader.beginArray();
           while (reader.hasNext()) {
@@ -169,7 +161,6 @@ class LayerParser {
           }
           composition.incrementMatteOrMaskCount(masks.length);
           reader.endArray();
-          break;
         case 11:
           reader.beginArray();
           while (reader.hasNext()) {
@@ -179,7 +170,6 @@ class LayerParser {
             }
           }
           reader.endArray();
-          break;
         case 12:
           reader.beginObject();
           while (reader.hasNext()) {
@@ -187,7 +177,6 @@ class LayerParser {
               case 0:
                 text = AnimatableValueParser.parseDocumentData(
                     reader, composition);
-                break;
               case 1:
                 reader.beginArray();
                 if (reader.hasNext()) {
@@ -198,14 +187,12 @@ class LayerParser {
                   reader.skipValue();
                 }
                 reader.endArray();
-                break;
               default:
                 reader.skipName();
                 reader.skipValue();
             }
           }
           reader.endObject();
-          break;
         case 13:
           reader.beginArray();
           var effectNames = <String>[];
@@ -221,11 +208,9 @@ class LayerParser {
                     dropShadowEffect =
                         DropShadowEffectParser().parse(reader, composition);
                   }
-                  break;
                 case 1:
                   var effectName = reader.nextString();
                   effectNames.add(effectName);
-                  break;
                 default:
                   reader.skipName();
                   reader.skipValue();
@@ -238,35 +223,33 @@ class LayerParser {
               "Lottie doesn't support layer effects. If you are using them for "
               ' fills, strokes, trim paths etc. then try adding them directly as contents '
               ' in your shape. Found: $effectNames');
-          break;
         case 14:
           timeStretch = reader.nextDouble();
-          break;
         case 15:
           startFrame = reader.nextDouble();
-          break;
         case 16:
-          preCompWidth = (reader.nextInt() * window.devicePixelRatio).round();
-          break;
+          preCompWidth = reader.nextDouble().toInt();
         case 17:
-          preCompHeight = (reader.nextInt() * window.devicePixelRatio).round();
-          break;
+          preCompHeight = reader.nextDouble().toInt();
         case 18:
           inFrame = reader.nextDouble();
-          break;
         case 19:
           outFrame = reader.nextDouble();
-          break;
         case 20:
-          timeRemapping = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          timeRemapping = AnimatableValueParser.parseFloat(reader, composition);
         case 21:
           cl = reader.nextString();
-          break;
         case 22:
           hidden = reader.nextBoolean();
-          break;
+        case 23:
+          autoOrient = reader.nextInt() == 1;
+        case 24:
+          var blendModeIndex = reader.nextInt();
+          if (blendModeIndex >= blendModes.length) {
+            composition.addWarning('Unsupported Blend Mode: $blendModeIndex');
+            break;
+          }
+          blendMode = blendModes[blendModeIndex];
         default:
           reader.skipName();
           reader.skipValue();
@@ -278,11 +261,7 @@ class LayerParser {
     // Before the in frame
     if (inFrame > 0) {
       var preKeyframe = Keyframe<double>(composition,
-          startValue: 0.0,
-          endValue: 0.0,
-          interpolator: null,
-          startFrame: 0.0,
-          endFrame: inFrame);
+          startValue: 0.0, endValue: 0.0, startFrame: 0.0, endFrame: inFrame);
       inOutKeyframes.add(preKeyframe);
     }
 
@@ -290,7 +269,6 @@ class LayerParser {
     var visibleKeyframe = Keyframe<double>(composition,
         startValue: 1.0,
         endValue: 1.0,
-        interpolator: null,
         startFrame: inFrame,
         endFrame: outFrame);
     inOutKeyframes.add(visibleKeyframe);
@@ -298,7 +276,6 @@ class LayerParser {
     var outKeyframe = Keyframe<double>(composition,
         startValue: 0.0,
         endValue: 0.0,
-        interpolator: null,
         startFrame: outFrame,
         endFrame: double.maxFinite);
     inOutKeyframes.add(outKeyframe);
@@ -306,6 +283,10 @@ class LayerParser {
     if (layerName.endsWith('.ai') || 'ai' == cl) {
       composition
           .addWarning('Convert your Illustrator layers to shape layers.');
+    }
+    if (autoOrient) {
+      transform ??= AnimatableTransform();
+      transform.isAutoOrient = autoOrient;
     }
 
     return Layer(
@@ -333,6 +314,7 @@ class LayerParser {
       isHidden: hidden,
       blurEffect: blurEffect,
       dropShadowEffect: dropShadowEffect,
+      blendMode: blendMode,
     );
   }
 }

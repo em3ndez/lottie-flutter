@@ -1,8 +1,9 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'buffer.dart';
 import 'json_scope.dart';
 import 'json_utf8_reader.dart';
+
+// ignore_for_file: unintended_html_in_doc_comment
 
 /// Reads a JSON (<a href="http://www.ietf.org/rfc/rfc7159.txt">RFC 7159</a>)
 /// encoded value as a stream of tokens. This stream includes both literal
@@ -167,7 +168,7 @@ abstract class JsonReader {
   bool failOnUnknown = false;
 
   /// Returns a new instance that reads UTF-8 encoded JSON from {@code source}.
-  static JsonReader fromBytes(Uint8List source) {
+  static JsonReader fromBytes(List<int> source) {
     return JsonUtf8Reader(Buffer(source));
   }
 

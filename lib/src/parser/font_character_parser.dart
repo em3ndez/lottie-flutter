@@ -24,19 +24,14 @@ class FontCharacterParser {
       switch (reader.selectName(_names)) {
         case 0:
           character = reader.nextString();
-          break;
         case 1:
           size = reader.nextDouble();
-          break;
         case 2:
           width = reader.nextDouble();
-          break;
         case 3:
           style = reader.nextString();
-          break;
         case 4:
           fontFamily = reader.nextString();
-          break;
         case 5:
           reader.beginObject();
           while (reader.hasNext()) {
@@ -44,18 +39,18 @@ class FontCharacterParser {
               case 0:
                 reader.beginArray();
                 while (reader.hasNext()) {
-                  shapes.add(ContentModelParser.parse(reader, composition)!
-                      as ShapeGroup);
+                  if (ContentModelParser.parse(reader, composition)
+                      case var shape?) {
+                    shapes.add(shape as ShapeGroup);
+                  }
                 }
                 reader.endArray();
-                break;
               default:
                 reader.skipName();
                 reader.skipValue();
             }
           }
           reader.endObject();
-          break;
         default:
           reader.skipName();
           reader.skipValue();

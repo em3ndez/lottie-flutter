@@ -9,8 +9,8 @@ import 'utils.dart';
 void main() {
   testWidgets('Can specify ImageProvider with zip file ', (tester) async {
     var size = const Size(500, 400);
-    tester.binding.window.physicalSizeTestValue = size;
-    tester.binding.window.devicePixelRatioTestValue = 1.0;
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
 
     var callCount = 0;
     ImageProvider imageProviderFactory(LottieImageAsset image) {
@@ -18,9 +18,15 @@ void main() {
       return FileImage(File('example/assets/Images/WeAccept/img_0.png'));
     }
 
+    Future<LottieComposition?> decoder(List<int> bytes) {
+      return LottieComposition.decodeZip(bytes,
+          imageProviderFactory: imageProviderFactory);
+    }
+
     var composition = (await tester.runAsync(() => FileLottie(
             File('example/assets/spinning_carrousel.zip'),
-            imageProviderFactory: imageProviderFactory)
+            imageProviderFactory: imageProviderFactory,
+            decoder: decoder)
         .load()))!;
 
     await tester.pumpWidget(FilmStrip(composition, size: size));
@@ -32,13 +38,13 @@ void main() {
 
   testWidgets('Can specify image delegate', (tester) async {
     var size = const Size(500, 400);
-    tester.binding.window.physicalSizeTestValue = size;
-    tester.binding.window.devicePixelRatioTestValue = 1.0;
+    tester.view.physicalSize = size;
+    tester.view.devicePixelRatio = 1.0;
 
-    var image = await tester.runAsync(() =>
+    var image = await tester.runAsync(() async =>
         loadImage(FileImage(File('example/assets/Images/WeAccept/img_0.png'))));
 
-    var composition = (await tester.runAsync(() =>
+    var composition = (await tester.runAsync(() async =>
         FileLottie(File('example/assets/spinning_carrousel.zip')).load()))!;
 
     var delegates = LottieDelegates(image: (composition, asset) {

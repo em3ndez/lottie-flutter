@@ -1,4 +1,3 @@
-import 'dart:ui';
 import '../composition.dart';
 import '../lottie_image_asset.dart';
 import '../model/font.dart';
@@ -29,26 +28,20 @@ class LottieCompositionParser {
   static LottieComposition parse(
       LottieComposition composition, JsonReader reader) {
     var parameters = CompositionParameters.forComposition(composition);
-    var scale = window.devicePixelRatio;
 
     reader.beginObject();
     while (reader.hasNext()) {
       switch (reader.selectName(_names)) {
         case 0:
-          parameters.bounds.width = (reader.nextInt() * scale).round();
-          break;
+          parameters.bounds.width = reader.nextDouble().toInt();
         case 1:
-          parameters.bounds.height = (reader.nextInt() * scale).round();
-          break;
+          parameters.bounds.height = reader.nextDouble().toInt();
         case 2:
           parameters.startFrame = reader.nextDouble();
-          break;
         case 3:
           parameters.endFrame = reader.nextDouble() - 0.01;
-          break;
         case 4:
           parameters.frameRate = reader.nextDouble();
-          break;
         case 5:
           var version = reader.nextString();
           var versions = version.split('.');
@@ -59,24 +52,18 @@ class LottieCompositionParser {
               majorVersion, minorVersion, patchVersion, 4, 4, 0)) {
             composition.addWarning('Lottie only supports bodymovin >= 4.4.0');
           }
-          break;
         case 6:
           _parseLayers(
               reader, composition, parameters.layers, parameters.layerMap);
-          break;
         case 7:
           _parseAssets(
               reader, composition, parameters.precomps, parameters.images);
-          break;
         case 8:
           _parseFonts(reader, parameters.fonts);
-          break;
         case 9:
           _parseChars(reader, composition, parameters.characters);
-          break;
         case 10:
           _parseMarkers(reader, composition, parameters.markers);
-          break;
         default:
           reader.skipName();
           reader.skipValue();
@@ -138,7 +125,6 @@ class LottieCompositionParser {
         switch (reader.selectName(_assetsNames)) {
           case 0:
             id = reader.nextString();
-            break;
           case 1:
             reader.beginArray();
             while (reader.hasNext()) {
@@ -147,19 +133,14 @@ class LottieCompositionParser {
               layers.add(layer);
             }
             reader.endArray();
-            break;
           case 2:
             width = reader.nextInt();
-            break;
           case 3:
             height = reader.nextInt();
-            break;
           case 4:
             imageFileName = reader.nextString();
-            break;
           case 5:
             relativeFolder = reader.nextString();
-            break;
           default:
             reader.skipName();
             reader.skipValue();
@@ -194,7 +175,6 @@ class LottieCompositionParser {
             fonts[font.name] = font;
           }
           reader.endArray();
-          break;
         default:
           reader.skipName();
           reader.skipValue();
@@ -228,13 +208,10 @@ class LottieCompositionParser {
         switch (reader.selectName(_markerNames)) {
           case 0:
             comment = reader.nextString();
-            break;
           case 1:
             frame = reader.nextDouble();
-            break;
           case 2:
             durationFrames = reader.nextDouble();
-            break;
           default:
             reader.skipName();
             reader.skipValue();

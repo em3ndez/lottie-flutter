@@ -2,29 +2,26 @@ import 'dart:ui';
 import 'package:vector_math/vector_math_64.dart';
 import '../../animation/keyframe/base_keyframe_animation.dart';
 import '../../animation/keyframe/value_callback_keyframe_animation.dart';
-import '../../lottie_drawable.dart';
 import '../../lottie_property.dart';
 import '../../utils.dart';
 import '../../value/lottie_value_callback.dart';
 import 'base_layer.dart';
-import 'layer.dart';
 
 class ImageLayer extends BaseLayer {
   final Paint paint = Paint();
   BaseKeyframeAnimation<ColorFilter, ColorFilter?>? _colorFilterAnimation;
 
-  ImageLayer(LottieDrawable lottieDrawable, Layer layerModel)
-      : super(lottieDrawable, layerModel);
+  ImageLayer(super.lottieDrawable, super.layerModel);
 
   @override
-  void drawLayer(Canvas canvas, Size size, Matrix4 parentMatrix,
+  void drawLayer(Canvas canvas, Matrix4 parentMatrix,
       {required int parentAlpha}) {
     var bitmap = getBitmap();
     if (bitmap == null) {
       return;
     }
-    var density = window.devicePixelRatio;
 
+    paint.filterQuality = lottieDrawable.filterQuality ?? FilterQuality.low;
     paint.setAlpha(parentAlpha);
     if (_colorFilterAnimation != null) {
       paint.colorFilter = _colorFilterAnimation!.value;
@@ -33,8 +30,8 @@ class ImageLayer extends BaseLayer {
     canvas.transform(parentMatrix.storage);
     var src =
         Rect.fromLTWH(0, 0, bitmap.width.toDouble(), bitmap.height.toDouble());
-    var dst = Rect.fromLTWH(
-        0, 0, bitmap.width * density, bitmap.height.toDouble() * density);
+    var dst =
+        Rect.fromLTWH(0, 0, bitmap.width.toDouble(), bitmap.height.toDouble());
     canvas.drawImageRect(bitmap, src, dst, paint);
     canvas.restore();
   }
@@ -44,8 +41,8 @@ class ImageLayer extends BaseLayer {
     var superBounds = super.getBounds(parentMatrix, applyParents: applyParents);
     var bitmap = getBitmap();
     if (bitmap != null) {
-      var bounds = Rect.fromLTWH(0, 0, bitmap.width * window.devicePixelRatio,
-          bitmap.height * window.devicePixelRatio);
+      var bounds = Rect.fromLTWH(
+          0, 0, bitmap.width.toDouble(), bitmap.height.toDouble());
       return boundsMatrix.mapRect(bounds);
     }
     return superBounds;

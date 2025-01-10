@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 import 'composition.dart';
 import 'frame_rate.dart';
 import 'lottie.dart';
@@ -13,6 +13,7 @@ import 'providers/load_image.dart';
 import 'providers/lottie_provider.dart';
 import 'providers/memory_provider.dart';
 import 'providers/network_provider.dart';
+import 'render_cache.dart';
 
 typedef LottieFrameBuilder = Widget Function(
   BuildContext context,
@@ -33,16 +34,16 @@ typedef LottieErrorWidgetBuilder = Widget Function(
 /// Several constructors are provided for the various ways that a Lottie file
 /// can be provided:
 ///
-///  * [new Lottie], for obtaining a composition from a [LottieProvider].
-///  * [new Lottie.asset], for obtaining a Lottie file from an [AssetBundle]
+///  * [Lottie], for obtaining a composition from a [LottieProvider].
+///  * [Lottie.asset], for obtaining a Lottie file from an [AssetBundle]
 ///    using a key.
-///  * [new Lottie.network], for obtaining a lottie file from a URL.
-///  * [new Lottie.file], for obtaining a lottie file from a [File].
-///  * [new Lottie.memory], for obtaining a lottie file from a [Uint8List].
+///  * [Lottie.network], for obtaining a lottie file from a URL.
+///  * [Lottie.file], for obtaining a lottie file from a [File].
+///  * [Lottie.memory], for obtaining a lottie file from a [Uint8List].
 ///
 class LottieBuilder extends StatefulWidget {
   const LottieBuilder({
-    Key? key,
+    super.key,
     required this.lottie,
     this.controller,
     this.frameRate,
@@ -59,12 +60,15 @@ class LottieBuilder extends StatefulWidget {
     this.fit,
     this.alignment,
     this.addRepaintBoundary,
+    this.filterQuality,
     this.onWarning,
-  }) : super(key: key);
+    this.renderCache,
+  });
 
   /// Creates a widget that displays an [LottieComposition] obtained from the network.
   LottieBuilder.network(
     String src, {
+    http.Client? client,
     Map<String, String>? headers,
     this.controller,
     this.frameRate,
@@ -75,7 +79,7 @@ class LottieBuilder extends StatefulWidget {
     this.options,
     LottieImageProviderFactory? imageProviderFactory,
     this.onLoaded,
-    Key? key,
+    super.key,
     this.frameBuilder,
     this.errorBuilder,
     this.width,
@@ -83,10 +87,17 @@ class LottieBuilder extends StatefulWidget {
     this.fit,
     this.alignment,
     this.addRepaintBoundary,
+    this.filterQuality,
     this.onWarning,
-  })  : lottie = NetworkLottie(src,
-            headers: headers, imageProviderFactory: imageProviderFactory),
-        super(key: key);
+    LottieDecoder? decoder,
+    this.renderCache,
+    bool? backgroundLoading,
+  }) : lottie = NetworkLottie(src,
+            client: client,
+            headers: headers,
+            imageProviderFactory: imageProviderFactory,
+            decoder: decoder,
+            backgroundLoading: backgroundLoading);
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [File].
   ///
@@ -99,7 +110,7 @@ class LottieBuilder extends StatefulWidget {
   /// `android.permission.READ_EXTERNAL_STORAGE` permission.
   ///
   LottieBuilder.file(
-    Object /*io.File|html.File*/ file, {
+    Object file, {
     this.controller,
     this.frameRate,
     this.animate,
@@ -109,7 +120,7 @@ class LottieBuilder extends StatefulWidget {
     this.options,
     LottieImageProviderFactory? imageProviderFactory,
     this.onLoaded,
-    Key? key,
+    super.key,
     this.frameBuilder,
     this.errorBuilder,
     this.width,
@@ -117,9 +128,17 @@ class LottieBuilder extends StatefulWidget {
     this.fit,
     this.alignment,
     this.addRepaintBoundary,
+    this.filterQuality,
     this.onWarning,
-  })  : lottie = FileLottie(file, imageProviderFactory: imageProviderFactory),
-        super(key: key);
+    LottieDecoder? decoder,
+    this.renderCache,
+    bool? backgroundLoading,
+  }) : lottie = FileLottie(
+          file,
+          imageProviderFactory: imageProviderFactory,
+          decoder: decoder,
+          backgroundLoading: backgroundLoading,
+        );
 
   /// Creates a widget that displays an [LottieComposition] obtained from an [AssetBundle].
   LottieBuilder.asset(
@@ -133,7 +152,7 @@ class LottieBuilder extends StatefulWidget {
     this.options,
     LottieImageProviderFactory? imageProviderFactory,
     this.onLoaded,
-    Key? key,
+    super.key,
     AssetBundle? bundle,
     this.frameBuilder,
     this.errorBuilder,
@@ -143,12 +162,17 @@ class LottieBuilder extends StatefulWidget {
     this.alignment,
     String? package,
     this.addRepaintBoundary,
+    this.filterQuality,
     this.onWarning,
-  })  : lottie = AssetLottie(name,
+    LottieDecoder? decoder,
+    this.renderCache,
+    bool? backgroundLoading,
+  }) : lottie = AssetLottie(name,
             bundle: bundle,
             package: package,
-            imageProviderFactory: imageProviderFactory),
-        super(key: key);
+            imageProviderFactory: imageProviderFactory,
+            decoder: decoder,
+            backgroundLoading: backgroundLoading);
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [Uint8List].
   LottieBuilder.memory(
@@ -163,17 +187,24 @@ class LottieBuilder extends StatefulWidget {
     LottieImageProviderFactory? imageProviderFactory,
     this.onLoaded,
     this.errorBuilder,
-    Key? key,
+    super.key,
     this.frameBuilder,
     this.width,
     this.height,
     this.fit,
     this.alignment,
     this.addRepaintBoundary,
+    this.filterQuality,
     this.onWarning,
-  })  : lottie =
-            MemoryLottie(bytes, imageProviderFactory: imageProviderFactory),
-        super(key: key);
+    LottieDecoder? decoder,
+    this.renderCache,
+    bool? backgroundLoading,
+  }) : lottie = MemoryLottie(
+          bytes,
+          imageProviderFactory: imageProviderFactory,
+          decoder: decoder,
+          backgroundLoading: backgroundLoading,
+        );
 
   /// The lottie animation to load.
   /// Example of providers: [AssetLottie], [NetworkLottie], [FileLottie], [MemoryLottie]
@@ -220,6 +251,7 @@ class LottieBuilder extends StatefulWidget {
 
   /// Some options to enable/disable some feature of Lottie
   /// - enableMergePaths: Enable merge path support
+  /// - enableApplyingOpacityToLayers: Enable layer-level opacity
   final LottieOptions? options;
 
   /// A builder function responsible for creating the widget that represents
@@ -361,6 +393,12 @@ class LottieBuilder extends StatefulWidget {
   /// This property is `true` by default.
   final bool? addRepaintBoundary;
 
+  /// The quality of the image layer. See [FilterQuality]
+  /// [FilterQuality.high] is highest quality but slowest.
+  ///
+  /// Defaults to [FilterQuality.low]
+  final FilterQuality? filterQuality;
+
   /// A callback called when there is a warning during the loading or painting
   /// of the animation.
   final WarningCallback? onWarning;
@@ -397,8 +435,39 @@ class LottieBuilder extends StatefulWidget {
   /// ```
   final ImageErrorWidgetBuilder? errorBuilder;
 
+  /// Opt-in to a special render mode where the frames of the animation are
+  /// lazily rendered and kept in a cache.
+  /// Subsequent runs of the animation will be cheaper to render.
+  ///
+  /// This is useful is the animation is complex and can consume lot of energy
+  /// from the battery.
+  /// This will trade an excessive CPU usage for an increase memory usage.
+  /// The main use-case is a short and small (size on the screen) animation that is
+  /// played repeatedly.
+  ///
+  /// There are 2 kinds of caches:
+  /// - [RenderCache.raster]: keep the frame rasterized in the cache (as [dart:ui.Image]).
+  ///   Subsequent runs of the animation are very cheap for both the CPU and GPU but it takes
+  ///   a lot of memory (rendered_width * rendered_height * frame_rate * duration_of_the_animation).
+  ///   This should only be used for very short and very small animations.
+  /// - [RenderCache.drawingCommands]: keep the frame as a list of graphical operations ([dart:ui.Picture]).
+  ///   Subsequent runs of the animation are cheaper for the CPU but not for the GPU.
+  ///   Memory usage is a lot lower than RenderCache.raster.
+  ///
+  /// The render cache is managed internally and will release the memory once the
+  /// animation disappear. The cache is shared between all animations.
+
+  /// Any change in the configuration of the animation (delegates, frame rate etc...)
+  /// will clear the cache entry.
+  /// For RenderCache.raster, any change in the size will invalidate the cache entry. The cache
+  /// use the final size visible on the screen (with all transforms applied).
+  ///
+  /// In order to not exceed the memory limit of a device, the raster cache is constrained
+  /// to maximum 50MB. After that, animations are not cached anymore.
+  final RenderCache? renderCache;
+
   @override
-  _LottieBuilderState createState() => _LottieBuilderState();
+  State<LottieBuilder> createState() => _LottieBuilderState();
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
@@ -418,13 +487,6 @@ class _LottieBuilderState extends State<LottieBuilder> {
   Future<LottieComposition>? _loadingFuture;
 
   @override
-  void initState() {
-    super.initState();
-
-    _load();
-  }
-
-  @override
   void didUpdateWidget(LottieBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
 
@@ -435,18 +497,23 @@ class _LottieBuilderState extends State<LottieBuilder> {
 
   void _load() {
     var provider = widget.lottie;
-    _loadingFuture = widget.lottie.load().then((composition) {
-      if (mounted && widget.lottie == provider) {
-        var onWarning = widget.onWarning;
-        composition.onWarning = onWarning;
-        if (onWarning != null) {
-          for (var warning in composition.warnings) {
-            onWarning(warning);
+    _loadingFuture = widget.lottie.load(context: context).then((composition) {
+      // LottieProvider.load() can return a Synchronous future and the onLoaded
+      // callback can call setState, so we wrap it in a microtask to avoid an
+      // "!_isDirty" error.
+      scheduleMicrotask(() {
+        if (mounted && widget.lottie == provider) {
+          var onWarning = widget.onWarning;
+          composition.onWarning = onWarning;
+          if (onWarning != null) {
+            for (var warning in composition.warnings) {
+              onWarning(warning);
+            }
           }
-        }
 
-        widget.onLoaded?.call(composition);
-      }
+          widget.onLoaded?.call(composition);
+        }
+      });
 
       return composition;
     });
@@ -454,6 +521,11 @@ class _LottieBuilderState extends State<LottieBuilder> {
 
   @override
   Widget build(BuildContext context) {
+    // We need to wait the first build instead of initState because AssetLottie
+    // provider may call DefaultAssetBundle.of
+    if (_loadingFuture == null) {
+      _load();
+    }
     return FutureBuilder<LottieComposition>(
       future: _loadingFuture,
       builder: (context, snapshot) {
@@ -462,17 +534,23 @@ class _LottieBuilderState extends State<LottieBuilder> {
           if (errorBuilder != null) {
             return errorBuilder(context, snapshot.error!, snapshot.stackTrace);
           } else if (kDebugMode) {
-            return ErrorWidget(snapshot.error!);
+            return SizedBox(
+              width: widget.width,
+              height: widget.height,
+              child: ErrorWidget(snapshot.error!),
+            );
           }
         }
 
         var composition = snapshot.data;
+        var animate = widget.animate;
+        animate ??= (composition?.durationFrames ?? 0) > 1.0;
 
         Widget result = Lottie(
           composition: composition,
           controller: widget.controller,
           frameRate: widget.frameRate,
-          animate: widget.animate,
+          animate: animate,
           reverse: widget.reverse,
           repeat: widget.repeat,
           delegates: widget.delegates,
@@ -482,6 +560,8 @@ class _LottieBuilderState extends State<LottieBuilder> {
           fit: widget.fit,
           alignment: widget.alignment,
           addRepaintBoundary: widget.addRepaintBoundary,
+          filterQuality: widget.filterQuality,
+          renderCache: widget.renderCache,
         );
 
         if (widget.frameBuilder != null) {

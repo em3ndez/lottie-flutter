@@ -1,9 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'content/shape_group.dart';
 
+@immutable
 class FontCharacter {
   static int hashFor(String character, String fontFamily, String style) {
-    var result = 0;
-    result = 31 * result + character.hashCode;
+    var result = character.hashCode;
     result = 31 * result + fontFamily.hashCode;
     result = 31 * result + style.hashCode;
     return result;
@@ -16,7 +17,7 @@ class FontCharacter {
   final String style;
   final String fontFamily;
 
-  FontCharacter(
+  const FontCharacter(
       {required this.shapes,
       required this.character,
       required this.size,

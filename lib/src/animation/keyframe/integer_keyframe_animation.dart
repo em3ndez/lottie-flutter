@@ -3,20 +3,22 @@ import '../../value/keyframe.dart';
 import 'keyframe_animation.dart';
 
 class IntegerKeyframeAnimation extends KeyframeAnimation<int> {
-  IntegerKeyframeAnimation(List<Keyframe<int>> keyframes) : super(keyframes);
+  IntegerKeyframeAnimation(super.keyframes);
 
   @override
   int getValue(Keyframe<int> keyframe, double keyframeProgress) {
-    if (keyframe.startValue == null || keyframe.endValue == null) {
+    if (keyframe.startValue == null) {
       throw Exception('Missing values for keyframe.');
     }
+
+    var endValue = keyframe.endValue ?? keyframe.startValue;
 
     if (valueCallback != null) {
       var value = valueCallback!.getValueInternal(
           keyframe.startFrame,
           keyframe.endFrame,
           keyframe.startValue,
-          keyframe.endValue,
+          endValue,
           keyframeProgress,
           getLinearCurrentKeyframeProgress(),
           progress);
@@ -25,7 +27,6 @@ class IntegerKeyframeAnimation extends KeyframeAnimation<int> {
       }
     }
 
-    return lerpDouble(keyframe.startValue, keyframe.endValue, keyframeProgress)!
-        .round();
+    return lerpDouble(keyframe.startValue, endValue, keyframeProgress)!.round();
   }
 }

@@ -26,22 +26,21 @@ class KeyframeParser {
 
   /// @param multiDimensional When true, the keyframe interpolators can be independent for the X and Y axis.
   static Keyframe<T> parse<T>(JsonReader reader, LottieComposition composition,
-      double scale, ValueParser<T> valueParser,
+      ValueParser<T> valueParser,
       {required bool animated, bool multiDimensional = false}) {
     if (animated && multiDimensional) {
-      return _parseMultiDimensionalKeyframe(
-          composition, reader, scale, valueParser);
+      return _parseMultiDimensionalKeyframe(composition, reader, valueParser);
     } else if (animated) {
-      return _parseKeyframe(composition, reader, scale, valueParser);
+      return _parseKeyframe(composition, reader, valueParser);
     } else {
-      return _parseStaticValue(reader, scale, valueParser);
+      return _parseStaticValue(reader, valueParser);
     }
   }
 
   /// beginObject will already be called on the keyframe so it can be differentiated with
   /// a non animated value.
   static Keyframe<T> _parseKeyframe<T>(LottieComposition composition,
-      JsonReader reader, double scale, ValueParser<T> valueParser) {
+      JsonReader reader, ValueParser<T> valueParser) {
     Offset? cp1;
     Offset? cp2;
     var startFrame = 0.0;
@@ -59,28 +58,20 @@ class KeyframeParser {
       switch (reader.selectName(_names)) {
         case 0:
           startFrame = reader.nextDouble();
-          break;
         case 1:
-          startValue = valueParser(reader, scale: scale);
-          break;
+          startValue = valueParser(reader);
         case 2:
-          endValue = valueParser(reader, scale: scale);
-          break;
+          endValue = valueParser(reader);
         case 3:
-          cp1 = JsonUtils.jsonToPoint(reader, 1);
-          break;
+          cp1 = JsonUtils.jsonToPoint(reader);
         case 4:
-          cp2 = JsonUtils.jsonToPoint(reader, 1);
-          break;
+          cp2 = JsonUtils.jsonToPoint(reader);
         case 5:
           hold = reader.nextInt() == 1;
-          break;
         case 6:
-          pathCp1 = JsonUtils.jsonToPoint(reader, scale);
-          break;
+          pathCp1 = JsonUtils.jsonToPoint(reader);
         case 7:
-          pathCp2 = JsonUtils.jsonToPoint(reader, scale);
-          break;
+          pathCp2 = JsonUtils.jsonToPoint(reader);
         default:
           reader.skipValue();
       }
@@ -97,12 +88,13 @@ class KeyframeParser {
       interpolator = _linearInterpolator;
     }
 
-    var keyframe = Keyframe<T>(composition,
-        startValue: startValue,
-        endValue: endValue,
-        interpolator: interpolator,
-        startFrame: startFrame,
-        endFrame: null);
+    var keyframe = Keyframe<T>(
+      composition,
+      startValue: startValue,
+      endValue: endValue,
+      interpolator: interpolator,
+      startFrame: startFrame,
+    );
     keyframe.pathCp1 = pathCp1;
     keyframe.pathCp2 = pathCp2;
     return keyframe;
@@ -111,7 +103,6 @@ class KeyframeParser {
   static Keyframe<T> _parseMultiDimensionalKeyframe<T>(
       LottieComposition composition,
       JsonReader reader,
-      double scale,
       ValueParser<T> valueParser) {
     Offset? cp1;
     Offset? cp2;
@@ -138,13 +129,10 @@ class KeyframeParser {
       switch (reader.selectName(_names)) {
         case 0: // t
           startFrame = reader.nextDouble();
-          break;
         case 1: // s
-          startValue = valueParser(reader, scale: scale);
-          break;
+          startValue = valueParser(reader);
         case 2: // e
-          endValue = valueParser(reader, scale: scale);
-          break;
+          endValue = valueParser(reader);
         case 3: // o
           if (reader.peek() == Token.beginObject) {
             reader.beginObject();
@@ -168,7 +156,6 @@ class KeyframeParser {
                     }
                     reader.endArray();
                   }
-                  break;
                 case 1: // y
                   if (reader.peek() == Token.number) {
                     xCp1y = reader.nextDouble();
@@ -183,7 +170,6 @@ class KeyframeParser {
                     }
                     reader.endArray();
                   }
-                  break;
                 default:
                   reader.skipValue();
               }
@@ -192,9 +178,8 @@ class KeyframeParser {
             yCp1 = Offset(yCp1x, yCp1y);
             reader.endObject();
           } else {
-            cp1 = JsonUtils.jsonToPoint(reader, scale);
+            cp1 = JsonUtils.jsonToPoint(reader);
           }
-          break;
         case 4: // i
           if (reader.peek() == Token.beginObject) {
             reader.beginObject();
@@ -218,7 +203,6 @@ class KeyframeParser {
                     }
                     reader.endArray();
                   }
-                  break;
                 case 1: // y
                   if (reader.peek() == Token.number) {
                     xCp2y = reader.nextDouble();
@@ -233,7 +217,6 @@ class KeyframeParser {
                     }
                     reader.endArray();
                   }
-                  break;
                 default:
                   reader.skipValue();
               }
@@ -242,18 +225,14 @@ class KeyframeParser {
             yCp2 = Offset(yCp2x, yCp2y);
             reader.endObject();
           } else {
-            cp2 = JsonUtils.jsonToPoint(reader, scale);
+            cp2 = JsonUtils.jsonToPoint(reader);
           }
-          break;
         case 5: // h
           hold = reader.nextInt() == 1;
-          break;
         case 6: // to
-          pathCp1 = JsonUtils.jsonToPoint(reader, scale);
-          break;
+          pathCp1 = JsonUtils.jsonToPoint(reader);
         case 7: // ti
-          pathCp2 = JsonUtils.jsonToPoint(reader, scale);
-          break;
+          pathCp2 = JsonUtils.jsonToPoint(reader);
         default:
           reader.skipValue();
       }
@@ -322,8 +301,8 @@ class KeyframeParser {
   }
 
   static Keyframe<T> _parseStaticValue<T>(
-      JsonReader reader, double scale, ValueParser<T> valueParser) {
-    var value = valueParser(reader, scale: scale);
+      JsonReader reader, ValueParser<T> valueParser) {
+    var value = valueParser(reader);
     return Keyframe<T>.nonAnimated(value);
   }
 }

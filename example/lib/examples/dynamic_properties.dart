@@ -7,10 +7,10 @@ void main() async {
 }
 
 class App extends StatefulWidget {
-  const App({Key? key}) : super(key: key);
+  const App({super.key});
 
   @override
-  _AppState createState() => _AppState();
+  State<App> createState() => _AppState();
 }
 
 class _AppState extends State<App> with TickerProviderStateMixin {
@@ -71,7 +71,7 @@ class _AppState extends State<App> with TickerProviderStateMixin {
                       _color = newColor;
                     });
                   },
-                  showLabel: false,
+                  labelTypes: const [],
                   enableAlpha: false,
                   pickerAreaHeightPercent: 0.8,
                 ),

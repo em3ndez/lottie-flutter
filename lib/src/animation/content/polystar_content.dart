@@ -8,7 +8,6 @@ import '../../model/content/shape_trim_path.dart';
 import '../../model/key_path.dart';
 import '../../model/layer/base_layer.dart';
 import '../../utils/misc.dart';
-import '../../utils/path_factory.dart';
 import '../../value/lottie_value_callback.dart';
 import '../keyframe/base_keyframe_animation.dart';
 import 'compound_trim_path_content.dart';
@@ -24,7 +23,7 @@ class PolystarContent implements PathContent, KeyPathElementContent {
   /// work otherwise.
   static const _polystarMagicNumber = .47829;
   static const _polygonMagicNumber = .25;
-  final _path = PathFactory.create();
+  final _path = Path();
 
   final LottieDrawable lottieDrawable;
   final PolystarShape _polystarShape;
@@ -108,10 +107,8 @@ class PolystarContent implements PathContent, KeyPathElementContent {
     switch (_polystarShape.type) {
       case PolystarShapeType.star:
         _createStarPath();
-        break;
       case PolystarShapeType.polygon:
         _createPolygonPath();
-        break;
     }
 
     _path.close();
@@ -134,6 +131,9 @@ class PolystarContent implements PathContent, KeyPathElementContent {
     currentAngle = radians(currentAngle);
     // adjust current angle for partial points
     var anglePerPoint = 2 * pi / points;
+    if (_polystarShape.isReversed) {
+      anglePerPoint *= -1;
+    }
     var halfAnglePerPoint = anglePerPoint / 2.0;
     var partialPointAmount = points - points.toInt();
     if (partialPointAmount != 0) {
@@ -146,7 +146,7 @@ class PolystarContent implements PathContent, KeyPathElementContent {
 
     var innerRoundedness = 0.0;
     if (_innerRoundednessAnimation != null) {
-      innerRoundedness = _innerRoundednessAnimation!.value / 100.0;
+      innerRoundedness = _innerRoundednessAnimation.value / 100.0;
     }
     var outerRoundedness = _outerRoundednessAnimation.value / 100.0;
 
@@ -250,7 +250,7 @@ class PolystarContent implements PathContent, KeyPathElementContent {
     _path.moveTo(x, y);
     currentAngle += anglePerPoint;
 
-    var numPoints = points.ceil().toDouble();
+    var numPoints = points.toDouble();
     for (var i = 0; i < numPoints; i++) {
       previousX = x;
       previousY = y;
@@ -304,14 +304,14 @@ class PolystarContent implements PathContent, KeyPathElementContent {
           .setValueCallback(callback as LottieValueCallback<Offset>?);
     } else if (property == LottieProperty.polystarInnerRadius &&
         _innerRadiusAnimation != null) {
-      _innerRadiusAnimation!
+      _innerRadiusAnimation
           .setValueCallback(callback as LottieValueCallback<double>?);
     } else if (property == LottieProperty.polystarOuterRadius) {
       _outerRadiusAnimation
           .setValueCallback(callback as LottieValueCallback<double>?);
     } else if (property == LottieProperty.polystarInnerRoundedness &&
         _innerRoundednessAnimation != null) {
-      _innerRoundednessAnimation!
+      _innerRoundednessAnimation
           .setValueCallback(callback as LottieValueCallback<double>?);
     } else if (property == LottieProperty.polystarOuterRoundedness) {
       _outerRoundednessAnimation

@@ -1,9 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 import '../lottie.dart';
 import 'composition.dart';
 import 'l.dart';
 import 'lottie_builder.dart';
+import 'providers/lottie_provider.dart';
 
 /// A widget to display a loaded [LottieComposition].
 /// The [controller] property allows to specify a custom AnimationController that
@@ -11,8 +13,11 @@ import 'lottie_builder.dart';
 /// automatically and the behavior could be adjusted with the properties [animate],
 /// [repeat] and [reverse].
 class Lottie extends StatefulWidget {
+  /// The cache instance for recently loaded Lottie compositions.
+  static LottieCache get cache => sharedLottieCache;
+
   const Lottie({
-    Key? key,
+    super.key,
     required this.composition,
     this.controller,
     this.width,
@@ -26,11 +31,12 @@ class Lottie extends StatefulWidget {
     this.delegates,
     this.options,
     bool? addRepaintBoundary,
+    this.filterQuality,
+    this.renderCache,
   })  : animate = animate ?? true,
         reverse = reverse ?? false,
         repeat = repeat ?? true,
-        addRepaintBoundary = addRepaintBoundary ?? true,
-        super(key: key);
+        addRepaintBoundary = addRepaintBoundary ?? true;
 
   /// Creates a widget that displays an [LottieComposition] obtained from an [AssetBundle].
   static LottieBuilder asset(
@@ -51,10 +57,14 @@ class Lottie extends StatefulWidget {
     double? width,
     double? height,
     BoxFit? fit,
-    Alignment? alignment,
+    AlignmentGeometry? alignment,
     String? package,
     bool? addRepaintBoundary,
+    FilterQuality? filterQuality,
     WarningCallback? onWarning,
+    LottieDecoder? decoder,
+    RenderCache? renderCache,
+    bool? backgroundLoading,
   }) =>
       LottieBuilder.asset(
         name,
@@ -77,12 +87,16 @@ class Lottie extends StatefulWidget {
         alignment: alignment,
         package: package,
         addRepaintBoundary: addRepaintBoundary,
+        filterQuality: filterQuality,
         onWarning: onWarning,
+        decoder: decoder,
+        renderCache: renderCache,
+        backgroundLoading: backgroundLoading,
       );
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [File].
   static LottieBuilder file(
-    Object /*io.File|html.File*/ file, {
+    Object file, {
     Animation<double>? controller,
     FrameRate? frameRate,
     bool? animate,
@@ -98,9 +112,13 @@ class Lottie extends StatefulWidget {
     double? width,
     double? height,
     BoxFit? fit,
-    Alignment? alignment,
+    AlignmentGeometry? alignment,
     bool? addRepaintBoundary,
+    FilterQuality? filterQuality,
     WarningCallback? onWarning,
+    LottieDecoder? decoder,
+    RenderCache? renderCache,
+    bool? backgroundLoading,
   }) =>
       LottieBuilder.file(
         file,
@@ -121,7 +139,11 @@ class Lottie extends StatefulWidget {
         fit: fit,
         alignment: alignment,
         addRepaintBoundary: addRepaintBoundary,
+        filterQuality: filterQuality,
         onWarning: onWarning,
+        decoder: decoder,
+        renderCache: renderCache,
+        backgroundLoading: backgroundLoading,
       );
 
   /// Creates a widget that displays an [LottieComposition] obtained from a [Uint8List].
@@ -142,9 +164,13 @@ class Lottie extends StatefulWidget {
     double? width,
     double? height,
     BoxFit? fit,
-    Alignment? alignment,
+    AlignmentGeometry? alignment,
     bool? addRepaintBoundary,
+    FilterQuality? filterQuality,
     WarningCallback? onWarning,
+    LottieDecoder? decoder,
+    RenderCache? renderCache,
+    bool? backgroundLoading,
   }) =>
       LottieBuilder.memory(
         bytes,
@@ -165,12 +191,18 @@ class Lottie extends StatefulWidget {
         fit: fit,
         alignment: alignment,
         addRepaintBoundary: addRepaintBoundary,
+        filterQuality: filterQuality,
         onWarning: onWarning,
+        decoder: decoder,
+        renderCache: renderCache,
+        backgroundLoading: backgroundLoading,
       );
 
   /// Creates a widget that displays an [LottieComposition] obtained from the network.
   static LottieBuilder network(
     String url, {
+    http.Client? client,
+    Map<String, String>? headers,
     Animation<double>? controller,
     FrameRate? frameRate,
     bool? animate,
@@ -186,12 +218,18 @@ class Lottie extends StatefulWidget {
     double? width,
     double? height,
     BoxFit? fit,
-    Alignment? alignment,
+    AlignmentGeometry? alignment,
     bool? addRepaintBoundary,
+    FilterQuality? filterQuality,
     WarningCallback? onWarning,
+    LottieDecoder? decoder,
+    RenderCache? renderCache,
+    bool? backgroundLoading,
   }) =>
       LottieBuilder.network(
         url,
+        client: client,
+        headers: headers,
         controller: controller,
         frameRate: frameRate,
         animate: animate,
@@ -209,7 +247,11 @@ class Lottie extends StatefulWidget {
         fit: fit,
         alignment: alignment,
         addRepaintBoundary: addRepaintBoundary,
+        filterQuality: filterQuality,
         onWarning: onWarning,
+        decoder: decoder,
+        renderCache: renderCache,
+        backgroundLoading: backgroundLoading,
       );
 
   /// The Lottie composition to animate.
@@ -290,6 +332,7 @@ class Lottie extends StatefulWidget {
 
   /// Some options to enable/disable some feature of Lottie
   /// - enableMergePaths: Enable merge path support
+  /// - enableApplyingOpacityToLayers: Enable layer-level opacity
   final LottieOptions? options;
 
   /// Indicate to automatically add a `RepaintBoundary` widget around the animation.
@@ -299,13 +342,52 @@ class Lottie extends StatefulWidget {
   /// This property is `true` by default.
   final bool addRepaintBoundary;
 
+  /// The quality of the image layer. See [FilterQuality]
+  /// [FilterQuality.high] is highest quality but slowest.
+  ///
+  /// Defaults to [FilterQuality.low]
+  final FilterQuality? filterQuality;
+
+  /// {@template lottie.renderCache}
+  /// Opt-in to a special render mode where the frames of the animation are
+  /// lazily rendered and kept in a cache.
+  /// Subsequent runs of the animation will be cheaper to render.
+  ///
+  /// This is useful is the animation is complex and can consume lot of energy
+  /// from the battery.
+  /// This will trade an excessive CPU usage for an increase memory usage.
+  /// The main use-case is a short and small (size on the screen) animation that is
+  /// played repeatedly.
+  ///
+  /// There are 2 kinds of caches:
+  /// - [RenderCache.raster]: keep the frame rasterized in the cache (as [dart:ui.Image]).
+  ///   Subsequent runs of the animation are very cheap for both the CPU and GPU but it takes
+  ///   a lot of memory (rendered_width * rendered_height * frame_rate * duration_of_the_animation).
+  ///   This should only be used for very short and very small animations.
+  /// - [RenderCache.drawingCommands]: keep the frame as a list of graphical operations ([dart:ui.Picture]).
+  ///   Subsequent runs of the animation are cheaper for the CPU but not for the GPU.
+  ///   Memory usage is a lot lower than RenderCache.raster.
+  ///
+  /// The render cache is managed internally and will release the memory once the
+  /// animation disappear. The cache is shared between all animations.
+
+  /// Any change in the configuration of the animation (delegates, frame rate etc...)
+  /// will clear the cache entry.
+  /// For RenderCache.raster, any change in the size will invalidate the cache entry. The cache
+  /// use the final size visible on the screen (with all transforms applied).
+  ///
+  /// In order to not exceed the memory limit of a device, the raster cache is constrained
+  /// to maximum 50MB. After that, animations are not cached anymore.
+  /// {@endtemplate}
+  final RenderCache? renderCache;
+
   static bool get traceEnabled => L.traceEnabled;
   static set traceEnabled(bool enabled) {
     L.traceEnabled = enabled;
   }
 
   @override
-  _LottieState createState() => _LottieState();
+  State<Lottie> createState() => _LottieState();
 }
 
 class _LottieState extends State<Lottie> with TickerProviderStateMixin {
@@ -366,6 +448,8 @@ class _LottieState extends State<Lottie> with TickerProviderStateMixin {
           height: widget.height,
           fit: widget.fit,
           alignment: widget.alignment,
+          filterQuality: widget.filterQuality,
+          renderCache: widget.renderCache,
         );
       },
     );

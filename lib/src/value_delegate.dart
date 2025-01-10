@@ -20,6 +20,8 @@ class ValueDelegate<T> {
       : assert(value == null || callback == null,
             "Value and callback can't be both specified.");
 
+  int get callbackHash => callback.hashCode;
+
   static ValueDelegate<Offset> _offset(
       List<String> keyPath,
       Offset property,
@@ -254,6 +256,11 @@ class ValueDelegate<T> {
           double? relative}) =>
       _double(keyPath, LottieProperty.textSize, value, callback, relative);
 
+  static ValueDelegate<String> text(List<String> keyPath,
+          {String? value,
+          String Function(LottieFrameInfo<String>)? callback}) =>
+      ValueDelegate._(keyPath, LottieProperty.text, value, callback);
+
   static ValueDelegate<ColorFilter> colorFilter(List<String> keyPath,
           {ColorFilter? value,
           ColorFilter Function(LottieFrameInfo<ColorFilter>)? callback}) =>
@@ -324,7 +331,7 @@ class ResolvedValueDelegate<T> {
   /// to multiple contents. In that case, the callbacks's value will apply to all of them.
   /// <p>
   /// Internally, this will check if the {@link KeyPath} has already been resolved with
-  /// {@link #resolveKeyPath(KeyPath)} and will resolve it if it hasn't.
+  /// {#resolveKeyPath(KeyPath)} and will resolve it if it hasn't.
   void addValueCallback(LottieDrawable drawable) {
     var invalidate = false;
     if (valueDelegate.keyPath.isEmpty) {

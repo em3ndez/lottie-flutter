@@ -7,7 +7,6 @@ import '../../model/key_path.dart';
 import '../../model/layer/base_layer.dart';
 import '../../utils.dart';
 import '../../utils/misc.dart';
-import '../../utils/path_factory.dart';
 import '../../value/lottie_value_callback.dart';
 import '../keyframe/base_keyframe_animation.dart';
 import '../keyframe/transform_keyframe_animation.dart';
@@ -25,7 +24,7 @@ class RepeaterContent
         GreedyContent,
         KeyPathElementContent {
   final Matrix4 _matrix = Matrix4.identity();
-  final _path = PathFactory.create();
+  final _path = Path();
 
   final LottieDrawable lottieDrawable;
   final BaseLayer layer;
@@ -79,7 +78,8 @@ class RepeaterContent
     newContents = newContents.reversed.toList();
 
     _contentGroup = ContentGroup.copy(
-        lottieDrawable, layer, 'Repeater', _repeater.hidden, newContents, null);
+        lottieDrawable, layer, 'Repeater', newContents, null,
+        hidden: _repeater.hidden);
   }
 
   @override
@@ -104,8 +104,7 @@ class RepeaterContent
   }
 
   @override
-  void draw(Canvas canvas, Size size, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     var copies = _copies.value;
     var offset = _offset.value;
     var startOpacity = _transform.startOpacity!.value / 100.0;
@@ -115,7 +114,7 @@ class RepeaterContent
       _matrix.preConcat(_transform.getMatrixForRepeater(i + offset));
       var newAlpha =
           parentAlpha * lerpDouble(startOpacity, endOpacity, i / copies)!;
-      _contentGroup!.draw(canvas, size, _matrix, parentAlpha: newAlpha.round());
+      _contentGroup!.draw(canvas, _matrix, parentAlpha: newAlpha.round());
     }
   }
 

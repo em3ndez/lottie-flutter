@@ -3,6 +3,7 @@ import 'composition.dart';
 import 'frame_rate.dart';
 import 'lottie_delegates.dart';
 import 'lottie_drawable.dart';
+import 'render_cache.dart';
 
 /// A Lottie animation in the render tree.
 ///
@@ -13,33 +14,51 @@ class RenderLottie extends RenderBox {
     required LottieComposition? composition,
     LottieDelegates? delegates,
     bool? enableMergePaths,
+    bool? enableApplyingOpacityToLayers,
     double progress = 0.0,
     FrameRate? frameRate,
     double? width,
     double? height,
     BoxFit? fit,
     AlignmentGeometry alignment = Alignment.center,
+    FilterQuality? filterQuality,
+    RenderCache? renderCache,
+    required double devicePixelRatio,
   })  : assert(progress >= 0.0 && progress <= 1.0),
+        assert(
+            renderCache == null || frameRate != FrameRate.max,
+            'FrameRate.max cannot be used with a RenderCache '
+            'Use a specific frame rate. e.g. FrameRate(60)'),
         _drawable = composition != null
-            ? (LottieDrawable(composition, enableMergePaths: enableMergePaths)
-              ..setProgress(progress, frameRate: frameRate)
-              ..delegates = delegates)
+            ? (LottieDrawable(composition, frameRate: frameRate)
+              ..setProgress(progress)
+              ..delegates = delegates
+              ..enableMergePaths = enableMergePaths ?? false
+              ..isApplyingOpacityToLayersEnabled =
+                  enableApplyingOpacityToLayers ?? false
+              ..filterQuality = filterQuality)
             : null,
         _width = width,
         _height = height,
         _fit = fit,
-        _alignment = alignment;
+        _alignment = alignment,
+        _renderCache = renderCache,
+        _devicePixelRatio = devicePixelRatio;
 
   /// The lottie composition to display.
   LottieComposition? get composition => _drawable?.composition;
   LottieDrawable? _drawable;
+
   void setComposition(LottieComposition? composition,
       {required double progress,
       required FrameRate? frameRate,
       required LottieDelegates? delegates,
-      bool? enableMergePaths}) {
+      bool? enableMergePaths,
+      bool? enableApplyingOpacityToLayers,
+      FilterQuality? filterQuality}) {
     var drawable = _drawable;
     enableMergePaths ??= false;
+    enableApplyingOpacityToLayers ??= false;
 
     var needsLayout = false;
     var needsPaint = false;
@@ -52,17 +71,31 @@ class RenderLottie extends RenderBox {
     } else {
       if (drawable == null ||
           drawable.composition != composition ||
-          drawable.enableMergePaths != enableMergePaths) {
-        drawable = _drawable =
-            LottieDrawable(composition, enableMergePaths: enableMergePaths);
+          drawable.frameRate != frameRate) {
+        drawable =
+            _drawable = LottieDrawable(composition, frameRate: frameRate);
         needsLayout = true;
         needsPaint = true;
       }
 
-      needsPaint |= drawable.setProgress(progress, frameRate: frameRate);
+      needsPaint |= drawable.setProgress(progress);
 
       if (drawable.delegates != delegates) {
         drawable.delegates = delegates;
+        needsPaint = true;
+      }
+      if (enableMergePaths != drawable.enableMergePaths) {
+        drawable.enableMergePaths = enableMergePaths;
+        needsPaint = true;
+      }
+      if (enableApplyingOpacityToLayers !=
+          drawable.isApplyingOpacityToLayersEnabled) {
+        drawable.isApplyingOpacityToLayersEnabled =
+            enableApplyingOpacityToLayers;
+        needsPaint = true;
+      }
+      if (filterQuality != drawable.filterQuality) {
+        drawable.filterQuality = filterQuality;
         needsPaint = true;
       }
     }
@@ -81,6 +114,7 @@ class RenderLottie extends RenderBox {
   /// aspect ratio.
   double? get width => _width;
   double? _width;
+
   set width(double? value) {
     if (value == _width) {
       return;
@@ -95,6 +129,7 @@ class RenderLottie extends RenderBox {
   /// aspect ratio.
   double? get height => _height;
   double? _height;
+
   set height(double? value) {
     if (value == _height) {
       return;
@@ -115,16 +150,36 @@ class RenderLottie extends RenderBox {
   }
 
   /// How to align the composition within its bounds.
-  ///
-  /// If this is set to a text-direction-dependent value, [textDirection] must
-  /// not be null.
   AlignmentGeometry get alignment => _alignment;
   AlignmentGeometry _alignment;
+
   set alignment(AlignmentGeometry value) {
     if (value == _alignment) {
       return;
     }
     _alignment = value;
+    markNeedsPaint();
+  }
+
+  RenderCache? get renderCache => _renderCache;
+  RenderCache? _renderCache;
+  set renderCache(RenderCache? value) {
+    if (value == _renderCache) {
+      return;
+    }
+    _renderCache?.release(this);
+    _renderCache = value;
+    markNeedsPaint();
+  }
+
+  double get devicePixelRatio => _devicePixelRatio;
+  double _devicePixelRatio;
+  set devicePixelRatio(double value) {
+    if (value == _devicePixelRatio) {
+      return;
+    }
+    _devicePixelRatio = value;
+    markNeedsPaint();
   }
 
   /// Find a size for the render composition within the given constraints.
@@ -201,8 +256,22 @@ class RenderLottie extends RenderBox {
   void paint(PaintingContext context, Offset offset) {
     if (_drawable == null) return;
 
-    _drawable!.draw(context.canvas, offset & size,
-        fit: _fit, alignment: _alignment.resolve(TextDirection.ltr));
+    RenderCacheContext? cacheContext;
+    if (_renderCache case var renderCache?) {
+      cacheContext = RenderCacheContext(
+        cache: renderCache.acquire(this),
+        devicePixelRatio: _devicePixelRatio,
+        renderBox: this,
+      );
+    }
+
+    _drawable!.draw(
+      context.canvas,
+      offset & size,
+      fit: _fit,
+      alignment: _alignment.resolve(TextDirection.ltr),
+      renderCache: cacheContext,
+    );
   }
 
   @override
@@ -216,5 +285,11 @@ class RenderLottie extends RenderBox {
     properties.add(DiagnosticsProperty<AlignmentGeometry>(
         'alignment', alignment,
         defaultValue: null));
+  }
+
+  @override
+  void dispose() {
+    _renderCache?.release(this);
+    super.dispose();
   }
 }

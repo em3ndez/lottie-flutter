@@ -7,7 +7,7 @@ class PathKeyframeAnimation extends KeyframeAnimation<Offset> {
   PathKeyframe? _pathMeasureKeyframe;
   late PathMetric _pathMeasure;
 
-  PathKeyframeAnimation(List<Keyframe<Offset>> keyframes) : super(keyframes);
+  PathKeyframeAnimation(super.keyframes);
 
   @override
   Offset getValue(Keyframe<Offset> keyframe, double keyframeProgress) {
@@ -36,8 +36,22 @@ class PathKeyframeAnimation extends KeyframeAnimation<Offset> {
       _pathMeasureKeyframe = pathKeyframe;
     }
 
-    return _pathMeasure
-        .getTangentForOffset(keyframeProgress * _pathMeasure.length)!
-        .position;
+    var length = _pathMeasure.length;
+
+    // allow bounce easings to calculate positions outside the path
+    // by using the tangent at the extremities
+
+    if (keyframeProgress < 0) {
+      var tangent = _pathMeasure.getTangentForOffset(0)!;
+      return tangent.position + tangent.vector * (keyframeProgress * length);
+    } else if (keyframeProgress > 1) {
+      var tangent = _pathMeasure.getTangentForOffset(length)!;
+      return tangent.position +
+          tangent.vector * ((keyframeProgress - 1) * length);
+    } else {
+      return _pathMeasure
+          .getTangentForOffset(keyframeProgress * length)!
+          .position;
+    }
   }
 }

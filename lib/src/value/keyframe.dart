@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/animation.dart';
 import '../composition.dart';
 
@@ -41,13 +40,25 @@ class Keyframe<T> {
         xInterpolator = null,
         yInterpolator = null;
 
+  Keyframe._(this.startValue, this.endValue)
+      : _composition = null,
+        interpolator = null,
+        xInterpolator = null,
+        yInterpolator = null,
+        startFrame = double.minPositive,
+        endFrame = double.maxFinite;
+
+  Keyframe<T> copyWith(T startValue, T endValue) {
+    return Keyframe<T>._(startValue, endValue);
+  }
+
   double get startProgress {
     if (_composition == null) {
       return 0.0;
     }
     if (_startProgress == double.minPositive) {
-      _startProgress = (startFrame - _composition!.startFrame) /
-          _composition!.durationFrames;
+      _startProgress =
+          (startFrame - _composition.startFrame) / _composition.durationFrames;
     }
     return _startProgress;
   }
@@ -61,7 +72,7 @@ class Keyframe<T> {
         _endProgress = 1.0;
       } else {
         var durationFrames = endFrame! - startFrame;
-        var durationProgress = durationFrames / _composition!.durationFrames;
+        var durationProgress = durationFrames / _composition.durationFrames;
         _endProgress = startProgress + durationProgress;
       }
     }

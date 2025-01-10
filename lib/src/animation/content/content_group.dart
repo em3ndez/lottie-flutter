@@ -8,7 +8,6 @@ import '../../model/key_path.dart';
 import '../../model/key_path_element.dart';
 import '../../model/layer/base_layer.dart';
 import '../../utils.dart';
-import '../../utils/path_factory.dart';
 import '../../value/lottie_value_callback.dart';
 import '../keyframe/transform_keyframe_animation.dart';
 import 'content.dart';
@@ -42,7 +41,7 @@ class ContentGroup implements DrawingContent, PathContent, KeyPathElement {
   }
 
   final Matrix4 _matrix = Matrix4.identity();
-  final Path _path = PathFactory.create();
+  final Path _path = Path();
 
   @override
   final String? name;
@@ -52,18 +51,20 @@ class ContentGroup implements DrawingContent, PathContent, KeyPathElement {
   List<PathContent>? _pathContents;
   TransformKeyframeAnimation? _transformAnimation;
 
-  ContentGroup(final LottieDrawable lottieDrawable, BaseLayer layer,
-      ShapeGroup shapeGroup)
+  ContentGroup(
+      LottieDrawable lottieDrawable, BaseLayer layer, ShapeGroup shapeGroup)
       : this.copy(
             lottieDrawable,
             layer,
             shapeGroup.name,
-            shapeGroup.hidden,
             contentsFromModels(lottieDrawable, layer, shapeGroup.items),
-            findTransform(shapeGroup.items));
+            findTransform(shapeGroup.items),
+            hidden: shapeGroup.hidden);
 
   ContentGroup.copy(this._lottieDrawable, BaseLayer layer, this.name,
-      this._hidden, this._contents, AnimatableTransform? transform) {
+      this._contents, AnimatableTransform? transform,
+      {required bool hidden})
+      : _hidden = hidden {
     if (transform != null) {
       _transformAnimation = transform.createAnimation()
         ..addAnimationsToLayer(layer)
@@ -142,8 +143,7 @@ class ContentGroup implements DrawingContent, PathContent, KeyPathElement {
   }
 
   @override
-  void draw(Canvas canvas, Size size, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     if (_hidden) {
       return;
     }
@@ -174,7 +174,7 @@ class ContentGroup implements DrawingContent, PathContent, KeyPathElement {
     for (var i = _contents.length - 1; i >= 0; i--) {
       Object content = _contents[i];
       if (content is DrawingContent) {
-        content.draw(canvas, size, _matrix, parentAlpha: childAlpha);
+        content.draw(canvas, _matrix, parentAlpha: childAlpha);
       }
     }
 

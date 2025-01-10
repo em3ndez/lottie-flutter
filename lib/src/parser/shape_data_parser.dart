@@ -6,7 +6,7 @@ import 'moshi/json_reader.dart';
 
 final JsonReaderOptions _names = JsonReaderOptions.of(['c', 'v', 'i', 'o']);
 
-ShapeData shapeDataParser(JsonReader reader, {required double scale}) {
+ShapeData shapeDataParser(JsonReader reader) {
   // Sometimes the points data is in a array of length 1. Sometimes the data is at the top
   // level.
   if (reader.peek() == Token.beginArray) {
@@ -23,16 +23,12 @@ ShapeData shapeDataParser(JsonReader reader, {required double scale}) {
     switch (reader.selectName(_names)) {
       case 0:
         closed = reader.nextBoolean();
-        break;
       case 1:
-        pointsArray = JsonUtils.jsonToPoints(reader, scale);
-        break;
+        pointsArray = JsonUtils.jsonToPoints(reader);
       case 2:
-        inTangents = JsonUtils.jsonToPoints(reader, scale);
-        break;
+        inTangents = JsonUtils.jsonToPoints(reader);
       case 3:
-        outTangents = JsonUtils.jsonToPoints(reader, scale);
-        break;
+        outTangents = JsonUtils.jsonToPoints(reader);
       default:
         reader.skipName();
         reader.skipValue();
@@ -51,7 +47,7 @@ ShapeData shapeDataParser(JsonReader reader, {required double scale}) {
 
   if (pointsArray.isEmpty) {
     return ShapeData(<CubicCurveData>[],
-        initialPoint: const Offset(0, 0), closed: false);
+        initialPoint: Offset.zero, closed: false);
   }
 
   var length = pointsArray.length;

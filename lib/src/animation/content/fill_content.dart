@@ -9,7 +9,6 @@ import '../../model/key_path.dart';
 import '../../model/layer/base_layer.dart';
 import '../../utils.dart';
 import '../../utils/misc.dart';
-import '../../utils/path_factory.dart';
 import '../../value/drop_shadow.dart';
 import '../../value/lottie_value_callback.dart';
 import '../keyframe/base_keyframe_animation.dart';
@@ -21,8 +20,7 @@ import 'key_path_element_content.dart';
 import 'path_content.dart';
 
 class FillContent implements DrawingContent, KeyPathElementContent {
-  final Path _path = PathFactory.create();
-  final Paint _paint = Paint();
+  final Path _path = Path();
   final BaseLayer layer;
   @override
   final String? name;
@@ -80,32 +78,32 @@ class FillContent implements DrawingContent, KeyPathElementContent {
   }
 
   @override
-  void draw(Canvas canvas, Size size, Matrix4 parentMatrix,
-      {required int parentAlpha}) {
+  void draw(Canvas canvas, Matrix4 parentMatrix, {required int parentAlpha}) {
     if (_hidden) {
       return;
     }
     L.beginSection('FillContent#draw');
-    _paint.color = _colorAnimation.value;
+
+    var paint = Paint()..color = _colorAnimation.value;
     var alpha =
         ((parentAlpha / 255.0 * _opacityAnimation.value / 100.0) * 255).round();
-    _paint.setAlpha(alpha.clamp(0, 255).toInt());
+    paint.setAlpha(alpha.clamp(0, 255));
     if (lottieDrawable.antiAliasingSuggested) {
-      _paint.isAntiAlias = true;
+      paint.isAntiAlias = true;
     }
 
     if (_colorFilterAnimation != null) {
-      _paint.colorFilter = _colorFilterAnimation!.value;
+      paint.colorFilter = _colorFilterAnimation!.value;
     }
 
     var blurAnimation = _blurAnimation;
     if (blurAnimation != null) {
       var blurRadius = blurAnimation.value;
       if (blurRadius == 0) {
-        _paint.maskFilter = null;
+        paint.maskFilter = null;
       } else if (blurRadius != _blurMaskFilterRadius) {
         var blur = layer.getBlurMaskFilter(blurRadius);
-        _paint.maskFilter = blur;
+        paint.maskFilter = blur;
       }
       _blurMaskFilterRadius = blurRadius;
     }
@@ -121,7 +119,7 @@ class FillContent implements DrawingContent, KeyPathElementContent {
     if (dropShadow != null) {
       dropShadow.draw(canvas, _path);
     }
-    canvas.drawPath(_path, _paint);
+    canvas.drawPath(_path, paint);
     canvas.restore();
 
     L.endSection('FillContent#draw');

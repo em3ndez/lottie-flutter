@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:analyzer/dart/analysis/features.dart';
 import 'package:analyzer/dart/analysis/utilities.dart';
 import 'package:analyzer/dart/ast/ast.dart';
 import 'package:dart_style/dart_style.dart';
@@ -34,16 +33,13 @@ bool fixFile(DartFile dartFile) {
   return false;
 }
 
-final DartFormatter _dartFormatter = DartFormatter(fixes: StyleFix.all);
+final DartFormatter _dartFormatter =
+    DartFormatter(languageVersion: Version(3, 5, 0));
 
 final String newLineChar = Platform.isWindows ? '\r\n' : '\n';
 
-final nullSafetyFeatureSet = FeatureSet.fromEnableFlags2(
-    sdkLanguageVersion: Version(2, 12, 0), flags: []);
-
 String reorderImports(String source) {
-  return _reorderImports(source,
-      parseString(content: source, featureSet: nullSafetyFeatureSet).unit);
+  return _reorderImports(source, parseString(content: source).unit);
 }
 
 String _reorderImports(String content, CompilationUnit unit) {
@@ -98,7 +94,7 @@ String _reorderImports(String content, CompilationUnit unit) {
   var contentBefore = content.substring(0, minOffset);
   var reorderedContent = '';
 
-  String _writeBlock(List<UriBasedDirective> directives) {
+  String writeBlock(List<UriBasedDirective> directives) {
     var result = '';
     for (var directive in directives) {
       var wholeDirective = wholeDirectives.firstWhere(
@@ -115,9 +111,9 @@ String _reorderImports(String content, CompilationUnit unit) {
     return '$result$newLineChar$newLineChar';
   }
 
-  reorderedContent += _removeBlankLines(_writeBlock(imports));
-  reorderedContent += _removeBlankLines(_writeBlock(exports));
-  reorderedContent += _removeBlankLines(_writeBlock(parts));
+  reorderedContent += _removeBlankLines(writeBlock(imports));
+  reorderedContent += _removeBlankLines(writeBlock(exports));
+  reorderedContent += _removeBlankLines(writeBlock(parts));
 
   var contentAfter = content.substring(maxOffset);
 

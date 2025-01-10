@@ -4,12 +4,11 @@ import '../animation/content/trim_path_content.dart';
 import '../l.dart';
 import '../utils.dart';
 import 'misc.dart';
-import 'path_factory.dart';
 
 class Utils {
   static Path createPath(
       Offset startPoint, Offset endPoint, Offset? cp1, Offset? cp2) {
-    var path = PathFactory.create();
+    var path = Path();
     path.moveTo(startPoint.dx, startPoint.dy);
 
     if (cp1 != null &&
@@ -104,16 +103,13 @@ class Utils {
       newStart -= length;
     }
 
-    var tempPath =
-        pathMeasure.extractPath(newStart, newEnd, startWithMoveTo: true);
+    var tempPath = pathMeasure.extractPath(newStart, newEnd);
 
     if (newEnd > length) {
-      var tempPath2 =
-          pathMeasure.extractPath(0, newEnd % length, startWithMoveTo: true);
+      var tempPath2 = pathMeasure.extractPath(0, newEnd % length);
       tempPath.addPath(tempPath2, Offset.zero);
     } else if (newStart < 0) {
-      var tempPath2 = pathMeasure.extractPath(length + newStart, length,
-          startWithMoveTo: true);
+      var tempPath2 = pathMeasure.extractPath(length + newStart, length);
       tempPath.addPath(tempPath2, Offset.zero);
     }
     path.set(tempPath);

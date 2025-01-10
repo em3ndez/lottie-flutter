@@ -1,37 +1,59 @@
 import 'dart:async';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;
 import '../composition.dart';
 import '../lottie_image_asset.dart';
+import 'load_fonts.dart';
 import 'load_image.dart';
 import 'lottie_provider.dart';
-import 'provider_io.dart' if (dart.library.html) 'provider_web.dart' as network;
 
+@immutable
 class NetworkLottie extends LottieProvider {
-  NetworkLottie(this.url,
-      {this.headers, LottieImageProviderFactory? imageProviderFactory})
-      : super(imageProviderFactory: imageProviderFactory);
+  NetworkLottie(
+    this.url, {
+    this.client,
+    this.headers,
+    super.imageProviderFactory,
+    super.decoder,
+    super.backgroundLoading,
+  });
 
+  final http.Client? client;
   final String url;
   final Map<String, String>? headers;
 
   @override
-  Future<LottieComposition> load() async {
-    var cacheKey = 'network-$url';
-    return sharedLottieCache.putIfAbsent(cacheKey, () async {
+  Future<LottieComposition> load({BuildContext? context}) {
+    return sharedLottieCache.putIfAbsent(this, () async {
       var resolved = Uri.base.resolve(url);
-      var bytes = await network.loadHttp(resolved, headers: headers);
 
-      var composition = await LottieComposition.fromBytes(bytes,
-          name: p.url.basenameWithoutExtension(url),
-          imageProviderFactory: imageProviderFactory);
+      var client = this.client ?? http.Client();
+      try {
+        var bytes = await client.readBytes(resolved, headers: headers);
 
-      for (var image in composition.images.values) {
-        image.loadedImage ??= await _loadImage(resolved, composition, image);
+        LottieComposition composition;
+        if (backgroundLoading) {
+          composition = await compute(parseJsonBytes, (bytes, decoder));
+        } else {
+          composition =
+              await LottieComposition.fromBytes(bytes, decoder: decoder);
+        }
+
+        for (var image in composition.images.values) {
+          image.loadedImage ??= await _loadImage(resolved, composition, image);
+        }
+
+        await ensureLoadedFonts(composition);
+
+        return composition;
+      } finally {
+        if (this.client == null) {
+          client.close();
+        }
       }
-
-      return composition;
     });
   }
 
@@ -49,9 +71,11 @@ class NetworkLottie extends LottieProvider {
   }
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other.runtimeType != runtimeType) return false;
-    return other is NetworkLottie && other.url == url;
+    return other is NetworkLottie &&
+        other.url == url &&
+        other.decoder == decoder;
   }
 
   @override

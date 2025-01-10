@@ -13,11 +13,12 @@ void main() async {
 class App extends StatelessWidget {
   final LottieComposition composition;
 
-  const App({Key? key, required this.composition}) : super(key: key);
+  const App({super.key, required this.composition});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      showPerformanceOverlay: true,
       home: Scaffold(
         appBar: AppBar(
           title: const Text(''),
@@ -103,8 +104,7 @@ class _Lottie extends StatefulWidget {
   final AlignmentGeometry? alignment;
 
   const _Lottie(this.composition,
-      {Key? key, this.width, this.height, this.fit, this.alignment})
-      : super(key: key);
+      {this.width, this.height, this.fit, this.alignment});
 
   @override
   __LottieState createState() => __LottieState();
@@ -137,6 +137,7 @@ class __LottieState extends State<_Lottie> with TickerProviderStateMixin {
         decoration: BoxDecoration(border: Border.all(color: Colors.red)),
         child: Lottie(
           composition: widget.composition,
+          renderCache: RenderCache.raster,
           controller: _controller,
           width: widget.width,
           height: widget.height,

@@ -8,17 +8,17 @@ import '../../model/content/shape_trim_path.dart';
 import '../../model/key_path.dart';
 import '../../model/layer/base_layer.dart';
 import '../../utils/misc.dart';
-import '../../utils/path_factory.dart';
 import '../../value/lottie_value_callback.dart';
 import '../keyframe/base_keyframe_animation.dart';
 import 'compound_trim_path_content.dart';
 import 'content.dart';
 import 'key_path_element_content.dart';
 import 'path_content.dart';
+import 'rounded_corners_content.dart';
 import 'trim_path_content.dart';
 
 class RectangleContent implements KeyPathElementContent, PathContent {
-  final _path = PathFactory.create();
+  final _path = Path();
 
   @override
   final String? name;
@@ -29,6 +29,9 @@ class RectangleContent implements KeyPathElementContent, PathContent {
   final BaseKeyframeAnimation<Object, double> _cornerRadiusAnimation;
 
   final CompoundTrimPathContent _trimPaths = CompoundTrimPathContent();
+
+  /// This corner radius is from a layer item. The first one is from the roundedness on this specific rect.
+  BaseKeyframeAnimation<double, double>? _roundedCornersAnimation;
   bool _isPathValid = false;
 
   RectangleContent(
@@ -61,6 +64,8 @@ class RectangleContent implements KeyPathElementContent, PathContent {
         var trimPath = content;
         _trimPaths.addTrimPath(trimPath);
         trimPath.addListener(invalidate);
+      } else if (content is RoundedCornersContent) {
+        _roundedCornersAnimation = content.roundedCorners;
       }
     }
   }
@@ -82,6 +87,10 @@ class RectangleContent implements KeyPathElementContent, PathContent {
     var halfWidth = size.dx / 2.0;
     var halfHeight = size.dy / 2.0;
     var radius = _cornerRadiusAnimation.value;
+    var roundedCornersAnimation = _roundedCornersAnimation;
+    if (radius == 0 && roundedCornersAnimation != null) {
+      radius = min(roundedCornersAnimation.value, min(halfWidth, halfHeight));
+    }
     var maxRadius = min(halfWidth, halfHeight);
     if (radius > maxRadius) {
       radius = maxRadius;

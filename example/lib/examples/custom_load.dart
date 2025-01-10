@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:lottie/lottie.dart';
 
 void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +18,10 @@ class MyApp extends StatelessWidget {
 
 //--- example
 class MyWidget extends StatefulWidget {
-  const MyWidget({Key? key}) : super(key: key);
+  const MyWidget({super.key});
 
   @override
-  _MyWidgetState createState() => _MyWidgetState();
+  State<MyWidget> createState() => _MyWidgetState();
 }
 
 class _MyWidgetState extends State<MyWidget> {
@@ -32,12 +31,7 @@ class _MyWidgetState extends State<MyWidget> {
   void initState() {
     super.initState();
 
-    _composition = _loadComposition();
-  }
-
-  Future<LottieComposition> _loadComposition() async {
-    var assetData = await rootBundle.load('assets/LottieLogo1.json');
-    return await LottieComposition.fromByteData(assetData);
+    _composition = AssetLottie('assets/LottieLogo1.json').load();
   }
 
   @override

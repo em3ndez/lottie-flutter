@@ -1,16 +1,15 @@
 import 'dart:ui';
 import '../../model/content/merge_paths.dart';
 import '../../utils.dart';
-import '../../utils/path_factory.dart';
 import 'content.dart';
 import 'content_group.dart';
 import 'greedy_content.dart';
 import 'path_content.dart';
 
 class MergePathsContent implements PathContent, GreedyContent {
-  final Path _firstPath = PathFactory.create();
-  final Path _remainderPath = PathFactory.create();
-  final Path _path = PathFactory.create();
+  final Path _firstPath = Path();
+  final Path _remainderPath = Path();
+  final Path _path = Path();
 
   final List<PathContent> _pathContents = <PathContent>[];
   final MergePaths _mergePaths;
@@ -50,19 +49,14 @@ class MergePathsContent implements PathContent, GreedyContent {
     switch (_mergePaths.mode) {
       case MergePathsMode.merge:
         _addPaths();
-        break;
       case MergePathsMode.add:
         _opFirstPathWithRest(PathOperation.union);
-        break;
       case MergePathsMode.substract:
         _opFirstPathWithRest(PathOperation.reverseDifference);
-        break;
       case MergePathsMode.intersect:
         _opFirstPathWithRest(PathOperation.intersect);
-        break;
       case MergePathsMode.excludeIntersections:
         _opFirstPathWithRest(PathOperation.xor);
-        break;
     }
 
     return _path;

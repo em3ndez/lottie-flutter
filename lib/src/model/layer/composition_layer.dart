@@ -50,7 +50,6 @@ class CompositionLayer extends BaseLayer {
           case MatteType.add:
           case MatteType.invert:
             mattedLayer = layer;
-            break;
           case MatteType.luma:
           case MatteType.lumaInverted:
           case MatteType.none:
@@ -76,7 +75,7 @@ class CompositionLayer extends BaseLayer {
   }
 
   @override
-  void drawLayer(Canvas canvas, Size size, Matrix4 parentMatrix,
+  void drawLayer(Canvas canvas, Matrix4 parentMatrix,
       {required int parentAlpha}) {
     L.beginSection('CompositionLayer#draw');
     var newClipRect = Rect.fromLTWH(0, 0, layerModel.preCompWidth.toDouble(),
@@ -102,7 +101,7 @@ class CompositionLayer extends BaseLayer {
       }
 
       var layer = _layers[i];
-      layer.draw(canvas, size, parentMatrix, parentAlpha: childAlpha);
+      layer.draw(canvas, parentMatrix, parentAlpha: childAlpha);
     }
     canvas.restore();
     L.endSection('CompositionLayer#draw');

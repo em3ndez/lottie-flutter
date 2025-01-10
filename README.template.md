@@ -10,6 +10,8 @@ This repository is an unofficial conversion of the [Lottie-android](https://gith
 
 It works on Android, iOS, macOS, linux, windows and web.
 
+<a href="https://www.buymeacoffee.com/xvrh" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
+
 ## Usage
 
 ### Simple animation
@@ -51,8 +53,7 @@ animation.
 The `Lottie` widget has several convenient constructors (`Lottie.asset`, `Lottie.network`, `Lottie.memory`) to load, parse and
 cache automatically the json file.
 
-Sometime you may prefer to have full control over the loading of the file. Use `LottieComposition.fromByteData` to 
-parse the file from a list of bytes.
+Sometime you may prefer to have full control over the loading of the file. Use `AssetLottie` (or `NetworkLottie`, `MemoryLottie`) to load a lottie composition from a json file.
 
 This example shows how to load and parse a Lottie composition from a json file.  
 
@@ -76,6 +77,42 @@ For each `ValueDelegate` we can either provide a static `value` or a `callback` 
 ````dart
 import 'example/lib/examples/simple_dynamic_properties.dart#example';
 ````
+
+### Frame rate
+By default, the animation is played at the frame rate exported by AfterEffect.
+This is the most power-friendly as generally the animation is exported at 10 or 30 FPS compared to the phone's 60 or 120 FPS.
+If the result is not good, you can change the frame rate
+
+````dart
+Lottie.asset('anim.json',
+  // Use the device frame rate (up to 120FPS)
+  frameRate: FrameRate.max,
+  // Use the exported frame rate (default)
+  frameRate: FrameRate.composition,
+  // Specific frame rate
+  frameRate: FrameRate(10),
+)
+````
+
+### Telegram Stickers (.tgs) and DotLottie (.lottie)
+TGS file can be loaded by providing a special decoder
+
+````dart
+import 'example/lib/examples/telegram_stickers.dart#example';
+````
+
+You can select the correct .json file from a dotlottie (.lottie) archive by providing a custom decoder
+
+````dart
+import 'example/lib/examples/dotlottie.dart#example';
+````
+
+## Performance or excessive CPU/GPU usage
+
+Version `v3.0` introduced the `renderCache` parameter to help reduce an excessive energy consumption.
+
+In this mode, the frames of the animation are rendered lazily in an offscreen cache. Subsequent runs of the animation 
+are cheaper to render. It helps reduce the power usage of the application at the cost of an increased memory usage.
 
 ## Limitations
 This port supports the same [feature set as Lottie Android](https://airbnb.io/lottie/#/supported-features).

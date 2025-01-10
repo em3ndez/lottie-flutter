@@ -19,26 +19,17 @@ class ShapeTrimPathParser {
     while (reader.hasNext()) {
       switch (reader.selectName(_names)) {
         case 0:
-          start = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          start = AnimatableValueParser.parseFloat(reader, composition);
         case 1:
-          end = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          end = AnimatableValueParser.parseFloat(reader, composition);
         case 2:
-          offset = AnimatableValueParser.parseFloat(reader, composition,
-              isDp: false);
-          break;
+          offset = AnimatableValueParser.parseFloat(reader, composition);
         case 3:
           name = reader.nextString();
-          break;
         case 4:
           type = ShapeTrimPath.typeForId(reader.nextInt());
-          break;
         case 5:
           hidden = reader.nextBoolean();
-          break;
         default:
           reader.skipValue();
       }
@@ -46,7 +37,7 @@ class ShapeTrimPathParser {
 
     return ShapeTrimPath(
         name: name,
-        type: type!,
+        type: type ?? ShapeTrimPathType.simultaneously,
         start: start!,
         end: end!,
         offset: offset!,
